@@ -75,8 +75,37 @@ class AdminController extends Controller
         });
         return response()->json([
             'message' => 'Agent hopital créé avec succès!',
-            'hopital'=>$data[hopital],
-            'user'=>$data[user]
+            'hopital'=>$data['hopital'],
+            'user'=>$data['user']
         ]);
     }
+    public function createCentre(Request $request){
+
+    $data=DB::transaction(function () use ($request) {
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'AgentCentre',
+                'phone'=>$request->phone,
+                'city' => $request->city,
+            ]);
+
+           $center= Centre::create([
+             'city' => $request->city,
+                'user_id' => $user->id,
+                'name' => $request->center_name,
+                'adress' => $request->address,
+                'liscence_number' => $request->license_number ,
+            ]);
+        });
+
+
+        return response()->json([
+            'message' => 'Agent Centre créé avec succès!',
+            'center'=>$data['center'],
+            'user'=>$data['user']
+        ]);
+}
 }
