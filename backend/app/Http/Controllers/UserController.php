@@ -18,22 +18,24 @@ class UserController extends Controller
 
 
     }
-     public function updateProfile($id){
-        $user=User::findOrfile($id);
-        if(!user){
-            return response()->json([
-                "message"=>"ce user ne trouve pas"
-            ]);
-        }
-        $data=request()->validate([
-            'name'=>'string',
-            'email'=>'email|unique:users,email,'.$user->id,
-            'password'=>'string',
-            'blood_group'=>'string'
-        ]);
-        if(isset($data['password'])){
-            $data['password']=Hash::make($data['password']);
-        }
-        $user->update($data);
-     }
+    public function updateProfile(UpdateProfileRequest $request, $id)
+{
+
+    $user = User::findOrFail($id);
+
+
+    $data = $request->validated();
+
+    
+    if (isset($data['password'])) {
+        $data['password'] = Hash::make($data['password']);
+    }
+
+    $user->update($data);
+
+    return response()->json([
+        "message" => "Profil mis à jour avec succès",
+        "user"    => $user
+    ]);
+}
 }
