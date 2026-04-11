@@ -2,6 +2,7 @@
 <?php
 
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller
@@ -33,7 +34,35 @@ public function register(RegisterRequest $request)
     ]);
 
 }
-public function login(){
-    
+public function login(LoginRequest $request)
+{
+
+    $credentials = $request->only('email', 'password');
+
+    if (!Auth::attempt($credentials)) {
+        return response()->json([
+            'message' => 'Email ou mot de passe incorrect'
+        ], 401);
+    }
+
+    $user = Auth::user();
+
+
+    if ($user->is_banned === true) {
+        Auth::logout(); 
+        return response()->json([
+            'message' => 'Votre compte est banni. Contactez l\'administrateur.'
+        ], 403);
+    }
+
+
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'message' => 'Connexion réussie',
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+        'user' => $user
+    ]);
 }
 }
