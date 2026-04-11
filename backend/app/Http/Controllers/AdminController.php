@@ -108,4 +108,12 @@ class AdminController extends Controller
             'user'=>$data['user']
         ]);
 }
+ public function listUsers(){
+        $users=User::all();
+        return response()->json([
+            'message'=>"bien afficher",
+            'data'=>$users
+        ]);
+    }
+    
 }
