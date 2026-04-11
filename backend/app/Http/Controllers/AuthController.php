@@ -49,7 +49,7 @@ public function login(LoginRequest $request)
 
 
     if ($user->is_banned === true) {
-        Auth::logout(); 
+        Auth::logout();
         return response()->json([
             'message' => 'Votre compte est banni. Contactez l\'administrateur.'
         ], 403);
@@ -65,4 +65,14 @@ public function login(LoginRequest $request)
         'user' => $user
     ]);
 }
+
+     public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logout successful'
+        ]);
+    }
+
 }
