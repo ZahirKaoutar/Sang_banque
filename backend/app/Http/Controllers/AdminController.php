@@ -112,38 +112,38 @@ class AdminController extends Controller
 
 
 
-public function supprimerCentre($id){
-    $centre=Centre::find($id);
-    if(!$centre){
+    public function supprimerCentre($id){
+        $centre=Centre::find($id);
+        if(!$centre){
+            return response()->json([
+                'message' => "Centre non trouvé"
+            ],404);
+        }
+        $centre->delete();
         return response()->json([
-            'message' => "Centre non trouvé"
-        ],404);
+            'message' => "Centre supprimé avec succès"
+        ],200);
     }
-    $centre->delete();
-    return response()->json([
-        'message' => "Centre supprimé avec succès"
-    ],200);
-}
 
 
 
-public function supprimerHopital($id){
-    $hopital=Hopital::find($id);
-    if(!$hopital){
+    public function supprimerHopital($id){
+        $hopital=Hopital::find($id);
+        if(!$hopital){
+            return response()->json([
+                'message' => "Hopital non trouvé"
+            ],404);
+        }
+        $hopital->delete();
         return response()->json([
-            'message' => "Hopital non trouvé"
-        ],404);
-    }
-    $hopital->delete();
-    return response()->json([
-        'message' => "Hopital supprimé avec succès"
-    ],200);}
- public function listUsers(){
-        $users=User::all();
-        return response()->json([
-            'message'=>"bien afficher",
-            'data'=>$users
-        ]);
-    }
+            'message' => "Hopital supprimé avec succès"
+        ],200);}
+    public function listUsers(){
+            $users=User::all();
+            return response()->json([
+                'message'=>"bien afficher",
+                'data'=>$users
+            ]);
+        }
 
 }
