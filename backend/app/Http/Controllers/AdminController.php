@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+
 class AdminController extends Controller
 {
     public function débannir($id){
@@ -47,6 +50,33 @@ class AdminController extends Controller
         return response()->json([
             'message'=>"bien afficher",
             'data'=>$centre
+        ]);
+    }
+    public function createHopital(Request $request){
+        $data=DB::transaction(function () use($request){
+             $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'AgentHopital',
+                'phone'=>$request->phone,
+                'city' => $request->city,
+            ]);
+
+           $hopital= Hopital::create([
+             'city' => $request->city,
+                'user_id' => $user->id,
+                'name' => $request->hospital_name,
+                'adress' => $request->address,
+                'liscence_number' => $request->license_number ,
+            ]);
+            return ['user' => $user, 'hopital' => $hopital];
+
+        });
+        return response()->json([
+            'message' => 'Agent hopital créé avec succès!',
+            'hopital'=>$data[hopital],
+            'user'=>$data[user]
         ]);
     }
 }
