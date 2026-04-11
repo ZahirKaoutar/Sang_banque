@@ -34,4 +34,19 @@ class AdminController extends Controller
         ],200);
 
     }
+    public function listHopitals(){
+        $hopitaux=Hopital::with('user')->where(role,'AgentHopital')->get();
+        return response()->json([
+            'message'=>"bien afficher",
+            'data'=>$hopitaux
+        ]);
+
+    }
+    public function listCenters(){
+        $centre=Centre::with('user')->where(role,'AgentCentre')->get();
+        return response()->json([
+            'message'=>"bien afficher",
+            'data'=>$centre
+        ]);
+    }
 }
