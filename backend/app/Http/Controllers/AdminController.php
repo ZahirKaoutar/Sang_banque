@@ -20,4 +20,18 @@ class AdminController extends Controller
         ],200);
 
     }
+    public function bannir($id){
+        $user=User::find($id);
+        if(!$user){
+            return response()->json([
+                'message' => "Utilisateur non trouvé"
+            ],404);
+        }
+        $user->is_banned=true;
+        $user->save();
+        return response()->json([
+            "message"=>"user est banni"
+        ],200);
+
+    }
 }
