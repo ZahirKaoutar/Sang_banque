@@ -38,7 +38,7 @@ class AdminController extends Controller
 
     }
     public function listHopitals(){
-        $hopitaux=Hopital::with('user')->where(role,'AgentHopital')->get();
+        $hopitaux=Hopital::with('user')->where('role','AgentHopital')->get();
         return response()->json([
             'message'=>"bien afficher",
             'data'=>$hopitaux
@@ -46,7 +46,7 @@ class AdminController extends Controller
 
     }
     public function listCenters(){
-        $centre=Centre::with('user')->where(role,'AgentCentre')->get();
+        $centre=Centre::with('user')->where('role','AgentCentre')->get();
         return response()->json([
             'message'=>"bien afficher",
             'data'=>$centre
@@ -99,6 +99,7 @@ class AdminController extends Controller
                 'adress' => $request->address,
                 'liscence_number' => $request->license_number ,
             ]);
+            return ['user' => $user, 'center' => $center];
         });
 
 
