@@ -8,7 +8,7 @@ use App\Models\BloodStock;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use App\Notifications\EmergencyBloodAlert; 
+use App\Notifications\EmergencyBloodAlert;
 use Illuminate\Support\Facades\DB;
 
 class CenterController extends Controller
@@ -36,6 +36,9 @@ class CenterController extends Controller
 
     }
 
+
+
+    
 
     public function validerRequest($requestId)
 {
