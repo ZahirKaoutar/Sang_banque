@@ -12,11 +12,11 @@ public function register(RegisterRequest $request)
     $role = User::count() === 0 ? 'Admin' : 'Donor';
 
 
-    $data = $request->validated(); 
+    $data = $request->validated();
     $data['password'] = Hash::make($request->password);
     $data['role'] = $role;
 
-    // Logique spécifique au rôle Donor
+
     if ($role === 'Donor') {
         $data['blood_group'] = $request->blood_group ?? 'Unknown';
         $data['status_availabality'] = true;
@@ -31,5 +31,9 @@ public function register(RegisterRequest $request)
         'message' => "Vous êtes inscrit avec succès",
         'user' => $user
     ]);
+
+}
+public function login(){
+    
 }
 }
