@@ -25,8 +25,9 @@ return new class extends Migration
     $table->enum('priority', ['Normal', 'Urgent'])
           ->default('Normal');
 
-    $table->enum('status', ['pending', 'Fulfilled', 'Canceled'])
+    $table->enum('status', ['pending', 'partial','Fulfilled', 'Canceled'])
           ->default('pending');
+    $table->string('quantity_fulfilled');
 
     $table->timestamps();
 });
