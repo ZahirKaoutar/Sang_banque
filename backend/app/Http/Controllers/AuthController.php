@@ -1,8 +1,8 @@
-
 <?php
-
+namespace App\Http\Controllers;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\LoginRequest;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller
@@ -24,6 +24,8 @@ public function register(RegisterRequest $request)
         $data['is_verified'] = false;
     } else {
         $data['is_verified'] = null;
+        $data['blood_group'] = null;
+         $data['status_availabality'] = true;
     }
 
     $user = User::create($data);

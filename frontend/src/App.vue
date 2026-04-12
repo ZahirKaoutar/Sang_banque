@@ -1,15 +1,23 @@
-<script setup>
+<template>
+  <!-- <img alt="Vue logo" src="./assets/logo.png">
+  <HelloWorld msg="Welcome to Your Vue.js App"/> -->
+  
+   
+<Navbar/>
+  
+
+<router-view />
+  
+</template>
+<script>
+import Navbar from './components/Navbar.vue';
+
+export default {
+ name: 'App',
+ components: {
+   Navbar,
+  
+ }
+}
 
 </script>
-
-<template>
-  <div id="app">
-    <nav class="p-4 bg-white shadow flex gap-4">
-      <router-link to="/home" class="text-red-600 font-bold">Accueil</router-link>
-      <router-link to="/about" class="text-gray-600">À Propos</router-link>
-    </nav>
-
-    <router-view />
-    
-  </div>
-</template>

@@ -1,53 +1,13 @@
+<script setup lang="ts">
+import router from '../router';
+
+</script>
+
 <template>
     <div id="app">
 
   <!-- ====== NAVBAR ====== -->
-  <nav class="fixed top-0 w-full z-50 backdrop-blur-md bg-white/90 border-b border-red-100 shadow-sm">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <!-- Logo -->
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background: var(--red-mid);">
-          <svg viewBox="0 0 24 24" class="w-5 h-5 fill-white">
-            <path d="M12 2C8 7 4 10.5 4 14a8 8 0 0016 0c0-3.5-4-7-8-12z"/>
-          </svg>
-        </div>
-        <span class="font-display text-xl font-bold" style="color: var(--red-deep);">HemoLife</span>
-      </div>
-
-      <!-- Desktop Nav -->
-      <div class="hidden md:flex items-center gap-8">
-        <a v-for="item in navItems" :key="item.label" :href="item.href"
-           class="nav-link text-sm font-medium text-gray-600 hover:text-red-700 transition-colors">
-          {{ item.label }}
-        </a>
-      </div>
-
-      <!-- CTA + Mobile toggle -->
-      <div class="flex items-center gap-3">
-        <button @click="showModal = true"
-                class="cta-btn hidden md:block text-sm font-semibold px-5 py-2.5 rounded-full text-white transition-all hover:opacity-90"
-                style="background: var(--red-mid);">
-          Donner maintenant
-        </button>
-        <button @click="menuOpen = !menuOpen" class="md:hidden p-2 rounded-lg hover:bg-red-50">
-          <div class="w-5 h-0.5 bg-gray-700 mb-1 transition-all" :class="menuOpen ? 'rotate-45 translate-y-1.5' : ''"></div>
-          <div class="w-5 h-0.5 bg-gray-700 mb-1 transition-all" :class="menuOpen ? 'opacity-0' : ''"></div>
-          <div class="w-5 h-0.5 bg-gray-700 transition-all" :class="menuOpen ? '-rotate-45 -translate-y-1.5' : ''"></div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mobile menu -->
-    <div v-if="menuOpen" class="md:hidden bg-white border-t border-red-50 px-6 py-4 flex flex-col gap-4 mobile-menu">
-      <a v-for="item in navItems" :key="item.label" :href="item.href"
-         class="text-sm font-medium text-gray-700 hover:text-red-700">{{ item.label }}</a>
-      <button @click="showModal = true"
-              class="cta-btn text-sm font-semibold px-5 py-3 rounded-full text-white"
-              style="background: var(--red-mid);">
-        Donner maintenant
-      </button>
-    </div>
-  </nav>
+  
 
   <!-- ====== HERO ====== -->
   <section class="blood-bg min-h-screen flex items-center pt-24 pb-16 px-6 relative overflow-hidden">

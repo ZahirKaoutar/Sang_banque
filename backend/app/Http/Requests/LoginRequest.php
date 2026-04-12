@@ -12,7 +12,7 @@ class LoginRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return trait_uses_recursive('Foo\Bar\Baz');
+        return true;
     }
 
     /**

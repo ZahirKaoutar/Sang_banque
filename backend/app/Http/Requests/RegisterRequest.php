@@ -31,4 +31,19 @@ class RegisterRequest extends FormRequest
             'blood_group' => 'nullable|string',
         ];
     }
+    public function messages(): array
+{
+    return [
+        'name.required'     => 'Le nom est obligatoire.',
+        'name.min'          => 'Le nom doit contenir au moins 3 caractères.',
+        'email.required'    => 'L\'adresse email est indispensable.',
+        'email.email'       => 'Veuillez entrer une adresse email valide.',
+        'email.unique'      => 'Cet email est déjà utilisé par un autre compte.',
+        'password.required' => 'Le mot de passe est requis.',
+        'password.min'      => 'Le mot de passe doit faire au moins 4 caractères.',
+        'city.required'     => 'La ville est obligatoire.',
+        'phone.required'    => 'Le numéro de téléphone est obligatoire.',
+        'phone.unique'      => 'Ce numéro de téléphone est déjà enregistré.',
+    ];
+}
 }

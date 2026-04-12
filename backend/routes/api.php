@@ -37,4 +37,4 @@ Route::post('repondDonor/{id}', [NotificationController::class,"respondDonor"])-
 
 
 
-Route::apiresource('donationdonor', [DonationController::class])->middleware('auth:sanctum');
+Route::apiResource('donationdonor', DonationController::class)->middleware('auth:sanctum');
