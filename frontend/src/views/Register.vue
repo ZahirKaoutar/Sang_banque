@@ -17,22 +17,25 @@
         <div>
           <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Nom complet</label>
           <input v-model="form.name" type="text" placeholder="Ex: Ahmed Benali"
-            class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all"
-            required />
+            :class="{'border-red-500 ring-2 ring-red-100': errors?.name}"
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all" />
+          <p v-if="errors?.name" class="text-red-500 text-xs mt-1 ml-1">{{ errors.name[0] }}</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Email</label>
             <input v-model="form.email" type="email" placeholder="ahmed@mail.ma"
-              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all"
-              required />
+              :class="{'border-red-500 ring-2 ring-red-100': errors?.email}"
+              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all" />
+            <p v-if="errors?.email" class="text-red-500 text-xs mt-1 ml-1">{{ errors.email[0] }}</p>
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Téléphone</label>
             <input v-model="form.phone" type="tel" placeholder="06XXXXXXXX"
-              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all"
-              required />
+              :class="{'border-red-500 ring-2 ring-red-100': errors?.phone}"
+              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all" />
+            <p v-if="errors?.phone" class="text-red-500 text-xs mt-1 ml-1">{{ errors.phone[0] }}</p>
           </div>
         </div>
 
@@ -40,18 +43,18 @@
           <div>
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Ville</label>
             <input v-model="form.city" type="text" placeholder="Ex: Marrakech"
-              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all"
-              required />
+              :class="{'border-red-500 ring-2 ring-red-100': errors?.city}"
+              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all" />
+            <p v-if="errors?.city" class="text-red-500 text-xs mt-1 ml-1">{{ errors.city[0] }}</p>
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Groupe
-              Sanguin</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Groupe Sanguin</label>
             <select v-model="form.blood_group"
-              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all appearance-none"
-              required>
+              class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all appearance-none">
               <option value="Unknown">Inconnu</option>
-              <option v-for="group in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']" :key="group" :value="group">{{
-                group }}</option>
+              <option v-for="group in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']" :key="group" :value="group">
+                {{ group }}
+              </option>
             </select>
           </div>
         </div>
@@ -59,19 +62,19 @@
         <div>
           <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Mot de passe</label>
           <input v-model="form.password" type="password" placeholder="••••••••"
-            class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all"
-            required />
+            :class="{'border-red-500 ring-2 ring-red-100': errors?.password}"
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-300 outline-none transition-all" />
+          <p v-if="errors?.password" class="text-red-500 text-xs mt-1 ml-1">{{ errors.password[0] }}</p>
         </div>
 
         <button type="submit"
-          class="w-full bg-red-500 hover:bg-red-deep text-white font-bold py-4 px-4 rounded-2xl shadow-lg shadow-red-200 transition-all transform hover:-translate-y-1 mt-4">
+          class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-4 rounded-2xl shadow-lg shadow-red-200 transition-all transform hover:-translate-y-1 mt-4">
           S'inscrire comme donneur
         </button>
 
         <p class="text-center text-sm text-gray-500 mt-6">
           Déjà membre ?
-          <router-link to="/login"
-            class="text-red-mid hover:text-red-deep font-bold underline-offset-4 hover:underline">
+          <router-link to="/login" class="text-red-600 hover:text-red-700 font-bold underline-offset-4 hover:underline">
             Connectez-vous ici
           </router-link>
         </p>
@@ -87,6 +90,7 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
+
 const form = ref({
   name: '',
   email: '',
@@ -96,23 +100,45 @@ const form = ref({
   password: ''
 });
 
+
+const errors = ref({
+   name: '',
+  email: '',
+  phone: '',
+  city: '',
+
+  password: ''
+});
+
 const handleRegister = async () => {
+  
+  errors.value = {};
+
   try {
-    
     await api.post('/register', form.value);                            
     alert("Bienvenue parmi nous ! Votre compte a été créé.");
     router.push('/login');
   } catch (error) {
-  console.log("ERROR:", error.response);
+    
+    if (error.response && error.response.status === 422) {
+      let data = error.response.data;
 
-  if (error.response?.data?.errors) {
-    alert(
-      "Données invalides :\n" +
-      Object.values(error.response.data.errors).flat().join('\n')
-    );
-  } else {
-    alert(error.response?.data?.message || "Erreur serveur");
-  }
-}
+     
+      if (typeof data === 'string') {
+        try {
+          
+          const jsonString = data.substring(data.indexOf('{'));
+          data = JSON.parse(jsonString);
+        } catch (e) {
+          console.error("Erreur de nettoyage JSON", e);
+        }
+      }
+
+    
+      errors.value = data.errors || {};
+    } else {
+      alert("Erreur serveur");
+    }}
+  
 };
 </script>
