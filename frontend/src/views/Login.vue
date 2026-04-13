@@ -76,19 +76,32 @@ const errors = ref({
 
 const handleLogin = async () => {
   try {
-    errors.value={}
-  
+    errors.value = {}
     const response = await api.post('/login', form.value);
 
-    
-    localStorage.setItem('access_token', response.data.access_token);
-    
-    alert("Bienvenue parmi nous !"); 
-    
-    router.push('/profile');
+    let data = response.data;
 
-  } catch (error) {
-    // 3. Si l'API renvoie une erreur (401, 500, etc.), le code saute directement ici
+    // NETTOYAGE : Si la réponse commence par un "+", on le retire et on parse le JSON
+    if (typeof data === 'string' && data.includes('{')) {
+      const jsonCleaned = data.substring(data.indexOf('{'));
+      data = JSON.parse(jsonCleaned);
+    }
+
+    if (data.access_token) {
+      localStorage.setItem('access_token', data.access_token);
+      
+      // Maintenant on récupère l'ID dans l'objet nettoyé
+      const userId = data.user?.id;
+      
+      if (userId) {
+        alert("Bienvenue !");
+        router.push(`/profile/${userId}`);
+      } else {
+        console.error("ID toujours introuvable après nettoyage", data);
+      }
+    }
+  }catch (error) {
+   
     if (error.response && error.response.status === 422) {
         let data=error.response.data;
         

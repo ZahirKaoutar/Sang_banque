@@ -18,7 +18,7 @@ class User extends Authenticatable
     'name',
     'email',
     'password',
-    'phone', 
+    'phone',
     'role',
     'city',
     'blood_group',
@@ -61,9 +61,9 @@ public function hopital(){
     return $this->hasOne(Hopital::class);
 }
 public function reports(){
-        $this->hasMany(Report::class);
+       return  $this->hasMany(Report::class);
 }
 public function donations(){
-        $this->hasMany(Donation::class);
+       return $this->hasMany(Donation::class);
 }
 }

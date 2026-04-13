@@ -38,3 +38,5 @@ Route::post('repondDonor/{id}', [NotificationController::class,"respondDonor"])-
 
 
 Route::apiResource('donationdonor', DonationController::class)->middleware('auth:sanctum');
+
+Route::get('profile/{id}', [UserController::class,"showProfile"]);
