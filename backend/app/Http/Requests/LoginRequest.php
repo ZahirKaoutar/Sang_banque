@@ -27,4 +27,16 @@ class LoginRequest extends FormRequest
             'password' => 'required|string',
         ];
     }
+     public function messages(): array
+{
+    return [
+
+        'email.required'    => 'L\'adresse email est indispensable.',
+        'email.email'       => 'Veuillez entrer une adresse email valide.',
+
+        'password.required' => 'Le mot de passe est requis.',
+    
+    ];
+}
+
 }
