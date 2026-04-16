@@ -1,0 +1,160 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Models\Hopital;
+use App\Models\Centre;
+class AdminController extends Controller
+{
+    public function débannir($id){
+        $user=User::find($id);
+        if(!$user){
+            return response()->json([
+                'message' => "Utilisateur non trouvé"
+            ],404);
+        }
+        $user->is_banned=false;
+        $user->save();
+        return response()->json([
+            "message"=>"user est debnnis"
+        ],200);
+
+    }
+    public function bannir($id){
+        $user=User::find($id);
+        if(!$user){
+            return response()->json([
+                'message' => "Utilisateur non trouvé"
+            ],404);
+        }
+        $user->is_banned=true;
+        $user->save();
+        return response()->json([
+            "message"=>"user est banni"
+        ],200);
+
+    }
+    public function listHopitals(){
+        $hopitaux=Hopital::with('user')->whereHas('user',function($query){
+            $query->where('role', 'AgentHopital');
+        })->get();
+        return response()->json([
+            'message'=>"bien afficher",
+            'data'=>$hopitaux
+        ]);
+
+    }
+   public function listCenters() {
+    // On cherche les centres qui ONT un utilisateur AVEC le rôle 'AgentCentre'
+    $centres = Centre::with('user')
+        ->whereHas('user', function($query) {
+            $query->where('role', 'AgentCentre');
+        })
+        ->get();
+
+    return response()->json([
+        'message' => "bien afficher",
+        'data' => $centres
+    ]);
+}
+    public function createHopital(Request $request){
+        $data=DB::transaction(function () use($request){
+             $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'AgentHopital',
+                'phone'=>$request->phone,
+                'city' => $request->city,
+            ]);
+
+           $hopital= Hopital::create([
+             'city' => $request->city,
+                'user_id' => $user->id,
+                'name' => $request->hospital_name,
+                'adress' => $request->adress,
+                'liscence_number' => $request->license_number ,
+            ]);
+            return ['user' => $user, 'hopital' => $hopital];
+
+        });
+        return response()->json([
+            'message' => 'Agent hopital créé avec succès!',
+            'hopital'=>$data['hopital'],
+            'user'=>$data['user']
+        ]);
+    }
+    public function createCentre(Request $request){
+
+    $data=DB::transaction(function () use ($request) {
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'AgentCentre',
+                'phone'=>$request->phone,
+                'city' => $request->city,
+            ]);
+
+           $center= Centre::create([
+             'city' => $request->city,
+                'user_id' => $user->id,
+                'name' => $request->center_name,
+                'adress' => $request->address,
+                'liscence_number' => $request->license_number ,
+            ]);
+            return ['user' => $user, 'center' => $center];
+        });
+
+
+        return response()->json([
+            'message' => 'Agent Centre créé avec succès!',
+            'center'=>$data['center'],
+            'user'=>$data['user']
+        ]);
+}
+
+
+
+
+    public function supprimerCentre($id){
+        $centre=Centre::find($id);
+        if(!$centre){
+            return response()->json([
+                'message' => "Centre non trouvé"
+            ],404);
+        }
+        $centre->delete();
+        return response()->json([
+            'message' => "Centre supprimé avec succès"
+        ],200);
+    }
+
+
+
+    public function supprimerHopital($id){
+        $hopital=Hopital::find($id);
+        if(!$hopital){
+            return response()->json([
+                'message' => "Hopital non trouvé"
+            ],404);
+        }
+        $hopital->delete();
+        return response()->json([
+            'message' => "Hopital supprimé avec succès"
+        ],200);}
+    public function listUsers(){
+            $users=User::all();
+            return response()->json([
+                'message'=>"bien afficher",
+                'data'=>$users
+            ]);
+        }
+
+}
