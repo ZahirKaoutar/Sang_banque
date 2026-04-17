@@ -63,12 +63,11 @@
                                 </td>
                                 <td class="py-4 px-4">
                                     @if($request->status === 'pending')
-                                        <form method="POST" action="{{ route('centre.validate', $request->id) }}" style="display: inline;">
-                                            @csrf
-                                            <button type="submit" class="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-bold">
-                                                Valider
-                                            </button>
-                                        </form>
+                                        <button
+                                            onclick="validateRequest({{ $request->id }}, this)"
+                                            class="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-bold">
+                                            Valider
+                                        </button>
                                     @else
                                         <span class="text-gray-400 text-sm">-</span>
                                     @endif
@@ -81,4 +80,53 @@
         @endif
     </div>
 </div>
+
+<script>
+function validateRequest(id, btn) {
+    if (!confirm('Valider cette demande ?')) return;
+
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    fetch('/centre/demandes/' + id + '/validate', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            btn.disabled = false;
+            btn.textContent = 'Valider';
+            alert(data.error);
+            return;
+        }
+        var statusColors = {
+            'Fulfilled': 'bg-green-100 text-green-800',
+            'partial':   'bg-yellow-100 text-yellow-800',
+            'pending':   'bg-orange-100 text-orange-800'
+        };
+        var color = statusColors[data.status] || 'bg-gray-100 text-gray-600';
+        var row = btn.closest('tr');
+        row.querySelector('td:nth-child(5)').innerHTML =
+            '<span class="inline-block px-3 py-1 rounded-full text-xs font-bold ' + color + '">' + data.status + '</span>';
+        btn.closest('td').innerHTML = '<span class="text-gray-400 text-sm">-</span>';
+
+        var banner = document.createElement('div');
+        banner.className = 'fixed top-4 right-4 z-50 bg-white border border-gray-200 rounded-2xl px-6 py-4 shadow-lg text-sm font-medium text-dark max-w-sm';
+        banner.textContent = data.message;
+        document.body.appendChild(banner);
+        setTimeout(function() { banner.remove(); }, 4000);
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Valider';
+        alert('Erreur serveur. Verifiez les logs.');
+    });
+}
+</script>
 @endsection

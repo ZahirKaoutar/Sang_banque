@@ -23,6 +23,7 @@ class User extends Authenticatable
     'city',
     'blood_group',
     'is_verified',
+    'is_banned',
     'status_availabality',
 ];
     /** @use HasFactory<UserFactory> */

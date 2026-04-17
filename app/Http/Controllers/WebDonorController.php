@@ -56,10 +56,17 @@ class WebDonorController extends Controller
     }
 
     /**
-     * Handle donor response to notification (accept/refuse) - AJAX
+     * Handle donor response to notification (accept/refuse)
      */
     public function respondNotification(Notification $notification, Request $request)
     {
+        $user = auth()->user();
+
+        // Authorization: donor blood group must match notification requirement
+        if ($user->blood_group !== $notification->blood_group_needed && $notification->blood_group_needed !== 'O-' && $user->blood_group !== 'O+') {
+            return back()->with('error', 'Vous n\'êtes pas autorisé à répondre à cette demande');
+        }
+
         $validated = $request->validate([
             'response' => 'required|in:accepter,refuser'
         ]);

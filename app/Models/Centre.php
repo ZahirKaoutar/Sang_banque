@@ -12,20 +12,20 @@ class Centre extends Model
     public function user(){
         return $this->belongsTo(User::class);
     }
-    public function  stock(){
-        return $this->hasMany(BloodStock::class);
+    public function stock(){
+        return $this->hasMany(BloodStock::class, 'center_id');
     }
     public function bloodRequests(){
-        return $this->hasMany(BloodRequest::class);
+        return $this->hasMany(BloodRequest::class, 'center_id');
     }
     public function notifications(){
-        return $this->hasMany(Notification::class);
+        return $this->hasMany(Notification::class, 'center_id');
     }
     public function reports(){
-        $this->hasMany(Report::class);
+        return $this->hasMany(Report::class, 'center_id');
     }
-     public function donations(){
-        $this->hasMany(Donation::class);
+    public function donations(){
+        return $this->hasMany(Donation::class, 'center_id');
     }
 
 }

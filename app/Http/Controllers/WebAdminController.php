@@ -9,9 +9,94 @@ use App\Http\Requests\StoreCentreRequest;
 use App\Http\Requests\StoreHopitalRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WebAdminController extends Controller
 {
+    public function editCentre(Centre $centre)
+    {
+        $centre->load('user');
+        return view('admin.edit-centre', compact('centre'));
+    }
+
+    public function updateCentre(Request $request, Centre $centre)
+    {
+        $request->validate([
+            'name'           => 'required|string|min:3',
+            'email'          => 'required|email|unique:users,email,' . $centre->user_id,
+            'phone'          => 'required|unique:users,phone,' . $centre->user_id,
+            'center_name'    => 'required|string|min:3',
+            'address'        => 'required|string',
+            'city'           => 'required|string',
+            'license_number' => 'required|string|unique:centers,liscence_number,' . $centre->id,
+        ]);
+
+        DB::transaction(function () use ($request, $centre) {
+            $centre->user->update([
+                'name'  => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'city'  => $request->city,
+            ]);
+            $centre->update([
+                'name'            => $request->center_name,
+                'adress'          => $request->address,
+                'city'            => $request->city,
+                'liscence_number' => $request->license_number,
+            ]);
+        });
+
+        return redirect()->route('admin.show-centre', $centre->id)->with('success', 'Centre modifié avec succès');
+    }
+
+    public function editHopital(Hopital $hopital)
+    {
+        $hopital->load('user');
+        return view('admin.edit-hopital', compact('hopital'));
+    }
+
+    public function updateHopital(Request $request, Hopital $hopital)
+    {
+        $request->validate([
+            'name'           => 'required|string|min:3',
+            'email'          => 'required|email|unique:users,email,' . $hopital->user_id,
+            'phone'          => 'required|unique:users,phone,' . $hopital->user_id,
+            'hospital_name'  => 'required|string|min:3',
+            'adress'         => 'required|string',
+            'city'           => 'required|string',
+            'license_number' => 'required|string|unique:hopitals,liscence_number,' . $hopital->id,
+        ]);
+
+        DB::transaction(function () use ($request, $hopital) {
+            $hopital->user->update([
+                'name'  => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'city'  => $request->city,
+            ]);
+            $hopital->update([
+                'name'            => $request->hospital_name,
+                'adress'          => $request->adress,
+                'city'            => $request->city,
+                'liscence_number' => $request->license_number,
+            ]);
+        });
+
+        return redirect()->route('admin.show-hopital', $hopital->id)->with('success', 'Hôpital modifié avec succès');
+    }
+
+    public function showCentre(Centre $centre)
+    {
+        $centre->load('user');
+        return view('admin.show-centre', compact('centre'));
+    }
+
+    public function showHopital(Hopital $hopital)
+    {
+        $hopital->load('user');
+        return view('admin.show-hopital', compact('hopital'));
+    }
+
     /**
      * Show all centres
      */
@@ -61,33 +146,76 @@ class WebAdminController extends Controller
     /**
      * Store new centre and agent user
      */
-    public function storeCentre(StoreCentreRequest $request)
-    {
-        $data = $request->validated();
+   public function storeCentre(StoreCentreRequest $request)
+{
+    $data = $request->validated();
 
-        // Create user (agent)
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'password' => Hash::make($data['password']),
-            'role' => 'AgentCentre',
-            'status_availabality' => true,
-            'is_verified' => null,
-        ]);
+    try {
+        DB::transaction(function () use ($data) {
+            // 1. Création de l'utilisateur Agent
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role' => 'AgentCentre',
+                'city' => $data['city'], // Correction : ajout de la ville
+                'status_availabality' => true,
+                'is_verified' => null,
+            ]);
 
-        // Create centre
-        Centre::create([
-            'name' => $data['center_name'],
-            'adress' => $data['address'],
-            'city' => $data['city'],
-            'liscence_number' => $data['license_number'],
-            'user_id' => $user->id,
-        ]);
+            // 2. Création du centre lié à cet utilisateur
+            Centre::create([
+                'name' => $data['center_name'],
+                'adress' => $data['address'],
+                'city' => $data['city'],
+                'liscence_number' => $data['license_number'],
+                'user_id' => $user->id,
+            ]);
+        });
 
-        return redirect()->route('admin.centres')->with('success', 'Centre créé avec succès');
+        return redirect()->route('admin.centres')->with('success', 'Centre et agent créés avec succès');
+
+    } catch (\Exception $e) {
+        // En cas d'erreur, on revient en arrière avec un message
+        return back()->withInput()->with('error', 'Erreur lors de la création : ' . $e->getMessage());
     }
+}
 
+public function storeHopital(StoreHopitalRequest $request)
+{
+    $data = $request->validated();
+
+    try {
+        DB::transaction(function () use ($data) {
+            // 1. Création de l'utilisateur Agent
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role' => 'AgentHopital',
+                'city' => $data['city'],
+                'status_availabality' => true,
+                'is_verified' => null,
+            ]);
+
+            // 2. Création de l'hôpital lié
+            Hopital::create([
+                'name' => $data['hospital_name'],
+                'adress' => $data['adress'],
+                'city' => $data['city'],
+                'liscence_number' => $data['license_number'],
+                'user_id' => $user->id,
+            ]);
+        });
+
+        return redirect()->route('admin.hopitaux')->with('success', 'Hôpital et agent créés avec succès');
+
+    } catch (\Exception $e) {
+        return back()->withInput()->with('error', 'Erreur lors de la création : ' . $e->getMessage());
+    }
+}
     /**
      * Show create hospital form
      */
@@ -99,62 +227,21 @@ class WebAdminController extends Controller
     /**
      * Store new hospital and agent user
      */
-    public function storeHopital(StoreHopitalRequest $request)
-    {
-        $data = $request->validated();
-
-        // Create user (agent)
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'password' => Hash::make($data['password']),
-            'role' => 'AgentHopital',
-            'status_availabality' => true,
-            'is_verified' => null,
-        ]);
-
-        // Create hospital
-        Hopital::create([
-            'name' => $data['hospital_name'],
-            'adress' => $data['adress'],
-            'city' => $data['city'],
-            'liscence_number' => $data['license_number'],
-            'user_id' => $user->id,
-        ]);
-
-        return redirect()->route('admin.hopitaux')->with('success', 'Hôpital créé avec succès');
-    }
-
+   
     /**
      * Delete centre - AJAX
      */
     public function deleteCentre(Centre $centre)
     {
-        // Delete associated user (cascade)
         $centre->user()->delete();
         $centre->delete();
-
-        if (request()->expectsJson()) {
-            return response()->json(['message' => 'Centre supprimé']);
-        }
-
         return back()->with('success', 'Centre supprimé');
     }
 
-    /**
-     * Delete hospital - AJAX
-     */
     public function deleteHopital(Hopital $hopital)
     {
-        // Delete associated user (cascade)
         $hopital->user()->delete();
         $hopital->delete();
-
-        if (request()->expectsJson()) {
-            return response()->json(['message' => 'Hôpital supprimé']);
-        }
-
         return back()->with('success', 'Hôpital supprimé');
     }
 

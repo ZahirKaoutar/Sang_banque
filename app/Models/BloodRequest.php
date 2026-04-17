@@ -18,6 +18,7 @@ class BloodRequest extends Model
         'blood_group',
         'priority',
         'status',
+        'description',
     ];
 
     // N'oublie pas de définir les relations pour plus tard

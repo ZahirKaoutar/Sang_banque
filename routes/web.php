@@ -40,7 +40,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:Donor'])->group(function () {
     Route::get('/mes-dons', [WebDonorController::class, 'myDonations'])->name('mes-dons');
     Route::get('/notifications', [WebDonorController::class, 'notifications'])->name('donor.notifications');
-    Route::post('/notifications/{id}/respond', [WebDonorController::class, 'respondNotification'])->name('donor.respond');
+    Route::post('/notifications/{notification}/respond', [WebDonorController::class, 'respondNotification'])->name('donor.respond');
 });
 
 /**
@@ -48,8 +48,11 @@ Route::middleware(['auth', 'role:Donor'])->group(function () {
  */
 Route::middleware(['auth', 'role:AgentCentre'])->group(function () {
     Route::get('/centre/demandes', [WebCentreController::class, 'demandes'])->name('centre.demandes');
-    Route::post('/centre/demandes/{id}/validate', [WebCentreController::class, 'validateRequest'])->name('centre.validate');
+    Route::post('/centre/demandes/{bloodRequest}/validate', [WebCentreController::class, 'validateRequest'])->name('centre.validate');
     Route::get('/centre/notifications', [WebCentreController::class, 'notifications'])->name('centre.notifications');
+    Route::get('/centre/stock', [WebCentreController::class, 'stock'])->name('centre.stock');
+    Route::post('/centre/stock', [WebCentreController::class, 'storeStock'])->name('centre.stock.store');
+    Route::delete('/centre/stock/{stock}', [WebCentreController::class, 'deleteStock'])->name('centre.stock.delete');
 });
 
 /**
@@ -77,8 +80,14 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::post('/admin/hopitaux', [WebAdminController::class, 'storeHopital'])->name('admin.store-hopital');
 
     // Delete/Ban Actions
-    Route::delete('/admin/centres/{id}', [WebAdminController::class, 'deleteCentre'])->name('admin.delete-centre');
-    Route::delete('/admin/hopitaux/{id}', [WebAdminController::class, 'deleteHopital'])->name('admin.delete-hopital');
+    Route::get('/admin/centres/{centre}', [WebAdminController::class, 'showCentre'])->name('admin.show-centre');
+    Route::get('/admin/centres/{centre}/edit', [WebAdminController::class, 'editCentre'])->name('admin.edit-centre');
+    Route::put('/admin/centres/{centre}', [WebAdminController::class, 'updateCentre'])->name('admin.update-centre');
+    Route::delete('/admin/centres/{centre}', [WebAdminController::class, 'deleteCentre'])->name('admin.delete-centre');
+    Route::get('/admin/hopitaux/{hopital}', [WebAdminController::class, 'showHopital'])->name('admin.show-hopital');
+    Route::get('/admin/hopitaux/{hopital}/edit', [WebAdminController::class, 'editHopital'])->name('admin.edit-hopital');
+    Route::put('/admin/hopitaux/{hopital}', [WebAdminController::class, 'updateHopital'])->name('admin.update-hopital');
+    Route::delete('/admin/hopitaux/{hopital}', [WebAdminController::class, 'deleteHopital'])->name('admin.delete-hopital');
     Route::post('/admin/users/{id}/ban', [WebAdminController::class, 'banUser'])->name('admin.ban-user');
     Route::post('/admin/users/{id}/unban', [WebAdminController::class, 'unbanUser'])->name('admin.unban-user');
 });

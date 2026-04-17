@@ -22,7 +22,7 @@ class WebPageController extends Controller
      */
     public function profile($id)
     {
-        $user = User::find($id);
+        $user = User::with(['centre', 'hopital'])->find($id);
 
         if (!$user) {
             abort(404, 'Utilisateur non trouvé');
@@ -30,10 +30,8 @@ class WebPageController extends Controller
 
         $donations = $user->donations()->with('centre')->orderBy('donation_date', 'desc')->get();
         $totalDonations = $donations->count();
-
-        // Calculate stats
         $acceptedDonations = $donations->filter(fn($d) => $d->test_result === 'accepted')->count();
-        $lifesSaved = $acceptedDonations * 3; // Estimate 3 lives per donation
+        $lifesSaved = $acceptedDonations * 3;
 
         return view('donor.profile', compact('user', 'donations', 'totalDonations', 'lifesSaved'));
     }
