@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\BloodRequest;
 use App\Models\BloodStock;
+use App\Models\Donation;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WebCentreController extends Controller
 {
@@ -47,15 +49,25 @@ class WebCentreController extends Controller
     /**
      * Validate a blood request - AJAX
      */
-    public function validateRequest(BloodRequest $bloodRequest)
+    public function validateRequest($id)
     {
-        $centre = auth()->user()->centre;
-
-        if (!$centre || $bloodRequest->center_id != $centre->id) {
-            return response()->json(['error' => 'Accès refusé'], 403);
-        }
-
         try {
+            $centre = auth()->user()->centre;
+
+            if (!$centre) {
+                return response()->json(['error' => 'Aucun centre associé'], 403);
+            }
+
+            $bloodRequest = BloodRequest::find($id);
+
+            if (!$bloodRequest) {
+                return response()->json(['error' => 'Demande non trouvée'], 404);
+            }
+
+            if ($bloodRequest->center_id != $centre->id) {
+                return response()->json(['error' => 'Accès refusé'], 403);
+            }
+
             $result = DB::transaction(function () use ($bloodRequest, $centre) {
                 $stock = BloodStock::where('center_id', $centre->id)
                     ->where('blood_group', $bloodRequest->blood_group)
@@ -65,7 +77,9 @@ class WebCentreController extends Controller
                 $quantiteDemandee = (int) $bloodRequest->quantity_needed;
 
                 if ($quantiteStock >= $quantiteDemandee) {
-                    $stock->decrement('quantity_units', $quantiteDemandee);
+                    if ($stock) {
+                        $stock->decrement('quantity_units', min($quantiteDemandee, $quantiteStock));
+                    }
                     $bloodRequest->update(['status' => 'Fulfilled', 'quantity_fulfilled' => $quantiteDemandee]);
                     return ['status' => 'Fulfilled', 'message' => 'Demande satisfaite. Stock mis à jour.'];
                 }
@@ -82,9 +96,10 @@ class WebCentreController extends Controller
                 return ['status' => 'pending', 'message' => 'Aucun stock. Alertes envoyées aux donneurs compatibles.'];
             });
 
-            return response()->json($result);
+            return response()->json($result, 200);
 
         } catch (\Exception $e) {
+            Log::error('validateRequest error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -143,8 +158,111 @@ class WebCentreController extends Controller
     }
 
     /**
+     * Return stock details for the validation modal
+     */
+    public function getRequestDetails($id)
+    {
+        try {
+            $centre = auth()->user()->centre;
+
+            if (!$centre) {
+                return response()->json(['error' => 'Aucun centre associé à votre compte'], 403);
+            }
+
+            $bloodRequest = BloodRequest::find($id);
+
+            if (!$bloodRequest) {
+                return response()->json(['error' => 'Demande non trouvée'], 404);
+            }
+
+            if ($bloodRequest->center_id != $centre->id) {
+                return response()->json(['error' => 'Cette demande n\'appartient pas à votre centre'], 403);
+            }
+
+            $stock = BloodStock::where('center_id', $centre->id)
+                ->where('blood_group', $bloodRequest->blood_group)
+                ->sum('quantity_units');
+
+            return response()->json([
+                'stock' => (int) $stock,
+                'blood_group' => $bloodRequest->blood_group,
+                'quantity_needed' => $bloodRequest->quantity_needed
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('getRequestDetails error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
+            return response()->json(['error' => 'Erreur serveur: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Record donation after medical test when donor shows up at the centre
+     */
+    public function storeDonation(Request $request)
+    {
+        $centre = auth()->user()->centre;
+        if (!$centre) abort(403);
+
+        $validated = $request->validate([
+            'notification_id'      => 'required|exists:notifications,id',
+            'donation_date'        => 'required|date|before_or_equal:today',
+            'test_result'          => 'required|in:accepted,rejected',
+            'observed_blood_group' => 'required|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'medical_notes'        => 'nullable|string|max:1000',
+        ]);
+
+        $notification = Notification::where('id', $validated['notification_id'])
+            ->where('center_id', $centre->id)
+            ->where('donor_response', 'accepter')
+            ->firstOrFail();
+
+        DB::transaction(function () use ($notification, $centre, $validated) {
+            // 1. Toujours créer l'enregistrement du don (accepté ou refusé)
+            Donation::create([
+                'user_id'              => $notification->user_id,
+                'center_id'            => $centre->id,
+                'donation_date'        => $validated['donation_date'],
+                'test_result'          => $validated['test_result'],
+                'observed_blood_group' => $validated['observed_blood_group'],
+                'medical_notes'        => $validated['medical_notes'] ?? null,
+            ]);
+
+            // 2. Incrémenter le stock SEULEMENT si le test est accepté
+            if ($validated['test_result'] === 'accepted') {
+                $stock = BloodStock::firstOrCreate(
+                    [
+                        'center_id'  => $centre->id,
+                        'blood_group' => $validated['observed_blood_group'],
+                    ],
+                    ['quantity_units' => 0, 'expiry_date' => now()->addDays(42)->format('Y-m-d')]
+                );
+                $stock->increment('quantity_units');
+
+                // Marquer le donneur comme vérifié et mettre à jour son groupe sanguin
+                $donor = User::find($notification->user_id);
+                $donor->update([
+                    'is_verified' => true,
+                    'blood_group' => $validated['observed_blood_group']
+                ]);
+            }
+
+            // 3. Marquer la notification comme traitée
+            $notification->update(['donation_recorded' => true]);
+        });
+
+        $msg = $validated['test_result'] === 'accepted'
+            ? 'Don accepté et stock mis à jour avec succès.'
+            : 'Don refusé. Les notes médicales ont été enregistrées.';
+
+        return back()->with(
+            $validated['test_result'] === 'accepted' ? 'success' : 'warning',
+            $msg
+        );
+    }
+
+    /**
      * Show donor responses to notifications
      */
+
     public function notifications()
     {
         $centre = auth()->user()->centre;

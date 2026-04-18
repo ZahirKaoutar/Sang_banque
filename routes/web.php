@@ -48,11 +48,13 @@ Route::middleware(['auth', 'role:Donor'])->group(function () {
  */
 Route::middleware(['auth', 'role:AgentCentre'])->group(function () {
     Route::get('/centre/demandes', [WebCentreController::class, 'demandes'])->name('centre.demandes');
-    Route::post('/centre/demandes/{bloodRequest}/validate', [WebCentreController::class, 'validateRequest'])->name('centre.validate');
+    Route::post('/centre/demandes/{id}/validate', [WebCentreController::class, 'validateRequest'])->name('centre.validate');
     Route::get('/centre/notifications', [WebCentreController::class, 'notifications'])->name('centre.notifications');
     Route::get('/centre/stock', [WebCentreController::class, 'stock'])->name('centre.stock');
     Route::post('/centre/stock', [WebCentreController::class, 'storeStock'])->name('centre.stock.store');
     Route::delete('/centre/stock/{stock}', [WebCentreController::class, 'deleteStock'])->name('centre.stock.delete');
+    Route::get('/centre/demandes/{id}/details', [WebCentreController::class, 'getRequestDetails'])->name('centre.demandes.details');
+    Route::post('/centre/donations', [WebCentreController::class, 'storeDonation'])->name('centre.donations.store');
 });
 
 /**

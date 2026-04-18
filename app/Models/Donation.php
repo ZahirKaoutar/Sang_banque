@@ -13,7 +13,9 @@ class Donation extends Model
         'user_id',
         'center_id',
         'medical_notes',
-        'donation_date'
+        'donation_date',
+        'test_result',
+        'observed_blood_group'
     ];
 
     protected $casts = [

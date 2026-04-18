@@ -15,7 +15,9 @@ class Notification extends Model
         'blood_group_needed',
         'donor_response',
         'responded_at',
+        'donation_recorded',
     ];
+    
 public function centre(){
     return $this->belongsTo(Centre::class,'center_id');
 }
