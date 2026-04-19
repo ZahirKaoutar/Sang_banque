@@ -20,7 +20,9 @@ class WebHopitalController extends Controller
             abort(403, 'Vous n\'êtes pas associé à un hôpital');
         }
 
-        $centres = Centre::all();
+        // Filter centers to only show those in the same city as the hospital
+        $centres = Centre::where('city', $hopital->city)->get();
+        
         $pastRequests = $hopital->bloodRequests()->with('centre')->orderBy('created_at', 'desc')->get();
 
         return view('hopital.demandes', compact('centres', 'pastRequests'));
@@ -38,6 +40,13 @@ class WebHopitalController extends Controller
         }
 
         $data = $request->validated();
+        
+        // Security check: ensure the requested center is in the same city
+        $center = \App\Models\Centre::findOrFail($data['center_id']);
+        if ($center->city !== $hopital->city) {
+            return back()->with('error', 'Vous ne pouvez faire une demande qu\'aux centres de votre ville.');
+        }
+
         $data['hopital_id'] = $hopital->id;
         $data['status'] = 'pending';
         $data['quantity_fulfilled'] = 0;
@@ -45,5 +54,23 @@ class WebHopitalController extends Controller
         $bloodRequest = BloodRequest::create($data);
 
         return redirect()->route('hopital.demandes')->with('success', 'Demande de sang envoyée');
+    }
+
+    /**
+     * Show notifications for the hospital
+     */
+    public function notifications()
+    {
+        $hopital = auth()->user()->hopital;
+
+        if (!$hopital) {
+            abort(403, 'Vous n\'êtes pas associé à un hôpital');
+        }
+
+        $notifications = \App\Models\Notification::where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('hopital.notifications', compact('notifications'));
     }
 }
