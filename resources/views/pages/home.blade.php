@@ -26,8 +26,8 @@
     </div>
 </section>
 
-<!-- Blood Type Compatibility Selector (Alpine.js) -->
-<section class="py-20" x-data="{ selectedType: 'O+' }">
+<!-- Blood Type Compatibility Selector -->
+<section class="py-20">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 class="font-display text-4xl font-bold text-dark mb-12 text-center">
             Compatibilité des groupes sanguins
@@ -39,7 +39,7 @@
                 <h3 class="text-lg font-bold text-dark mb-4">Sélectionnez votre groupe sanguin</h3>
                 <div class="grid grid-cols-4 gap-3">
                     @foreach(['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as $group)
-                        <button @click="selectedType = '{{ $group }}'" :class="selectedType === '{{ $group }}' ? 'bg-red-mid text-white' : 'bg-gray-100 text-dark hover:bg-gray-200'" class="p-4 rounded-2xl font-bold transition-all">
+                        <button data-type="{{ $group }}" class="bt-selector-btn p-4 rounded-2xl font-bold transition-all bg-gray-100 text-dark hover:bg-gray-200">
                             {{ $group }}
                         </button>
                     @endforeach
@@ -48,7 +48,7 @@
 
             <!-- Compatibility Info -->
             <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-                <div x-show="selectedType === 'O+'" class="space-y-4">
+                <div data-type="O+" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">O+ (Donneur universel)</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -60,7 +60,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'O-'" class="space-y-4">
+                <div data-type="O-" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">O- (Donneur universel d'urgence)</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -72,7 +72,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'A+'" class="space-y-4">
+                <div data-type="A+" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">A+</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -84,7 +84,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'A-'" class="space-y-4">
+                <div data-type="A-" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">A-</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -96,7 +96,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'B+'" class="space-y-4">
+                <div data-type="B+" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">B+</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -108,7 +108,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'B-'" class="space-y-4">
+                <div data-type="B-" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">B-</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -120,7 +120,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'AB+'" class="space-y-4">
+                <div data-type="AB+" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">AB+ (Receveur universel)</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -132,7 +132,7 @@
                     </div>
                 </div>
 
-                <div x-show="selectedType === 'AB-'" class="space-y-4">
+                <div data-type="AB-" class="bt-info-div js-hidden space-y-4">
                     <h4 class="text-2xl font-bold text-red-mid">AB-</h4>
                     <div>
                         <p class="font-bold text-dark mb-2">✅ Peut donner à:</p>
@@ -162,7 +162,7 @@
                     <span class="text-2xl">❤️</span>
                 </div>
                 <h3 class="text-xl font-bold text-dark mb-3">Sauver des vies</h3>
-                <p class="text-gray-600">Un don de sang peut sauver jusqu'à 3 vies. Votre geste généeux peut faire toute la différence</p>
+                <p class="text-gray-600">Un don de sang peut sauver jusqu'à 3 vies. Votre geste généreux peut faire toute la différence</p>
             </div>
 
             <!-- Card 2 -->
@@ -235,4 +235,40 @@
 </section>
 @endguest
 
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const btns = document.querySelectorAll('.bt-selector-btn');
+        const infoDivs = document.querySelectorAll('.bt-info-div');
+        
+        function selectType(type) {
+            btns.forEach(btn => {
+                if(btn.getAttribute('data-type') === type) {
+                    btn.className = 'bt-selector-btn p-4 rounded-2xl font-bold transition-all bg-red-mid text-white';
+                } else {
+                    btn.className = 'bt-selector-btn p-4 rounded-2xl font-bold transition-all bg-gray-100 text-dark hover:bg-gray-200';
+                }
+            });
+            
+            infoDivs.forEach(div => {
+                if(div.getAttribute('data-type') === type) {
+                    div.classList.remove('js-hidden');
+                } else {
+                    div.classList.add('js-hidden');
+                }
+            });
+        }
+        
+        btns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                selectType(e.currentTarget.getAttribute('data-type'));
+            });
+        });
+        
+        // initialize
+        selectType('O+');
+    });
+</script>
 @endsection
