@@ -43,6 +43,35 @@ class WebAuthController extends Controller
 
         $request->session()->regenerate();
 
+        if ($user->role === 'Donor' && $user->blood_group && $user->blood_group !== 'Unknown') {
+            $pendingRequests = \App\Models\BloodRequest::with('centre')
+                ->whereIn('status', ['pending', 'partial'])
+                ->where('blood_group', $user->blood_group)
+                ->whereHas('centre', function($q) use ($user) {
+                    $q->where('city', $user->city);
+                })
+                ->get();
+
+            foreach($pendingRequests as $req) {
+                if (!$req->centre) continue;
+                $existing = \App\Models\Notification::where('user_id', $user->id)
+                    ->where('center_id', $req->center_id)
+                    ->where('blood_group_needed', $req->blood_group)
+                    ->where('created_at', '>=', now()->subHours(24))
+                    ->first();
+                
+                if (!$existing) {
+                    \App\Models\Notification::create([
+                        'user_id'            => $user->id,
+                        'center_id'          => $req->center_id,
+                        'blood_group_needed' => $req->blood_group,
+                        'message'            => 'Urgence : ' . $req->quantity_needed . ' unites de sang ' . $req->blood_group . ' necessaires au ' . $req->centre->name . '. Priorite : ' . $req->priority,
+                        'sent_at'            => now(),
+                    ]);
+                }
+            }
+        }
+
         // Redirect based on role
         switch ($user->role) {
             case 'Admin':
@@ -92,6 +121,35 @@ class WebAuthController extends Controller
         // Auto-login after registration
         Auth::login($user);
         $request->session()->regenerate();
+
+        if ($user->role === 'Donor' && $user->blood_group && $user->blood_group !== 'Unknown') {
+            $pendingRequests = \App\Models\BloodRequest::with('centre')
+                ->whereIn('status', ['pending', 'partial'])
+                ->where('blood_group', $user->blood_group)
+                ->whereHas('centre', function($q) use ($user) {
+                    $q->where('city', $user->city);
+                })
+                ->get();
+
+            foreach($pendingRequests as $req) {
+                if (!$req->centre) continue;
+                $existing = \App\Models\Notification::where('user_id', $user->id)
+                    ->where('center_id', $req->center_id)
+                    ->where('blood_group_needed', $req->blood_group)
+                    ->where('created_at', '>=', now()->subHours(24))
+                    ->first();
+                
+                if (!$existing) {
+                    \App\Models\Notification::create([
+                        'user_id'            => $user->id,
+                        'center_id'          => $req->center_id,
+                        'blood_group_needed' => $req->blood_group,
+                        'message'            => 'Urgence : ' . $req->quantity_needed . ' unites de sang ' . $req->blood_group . ' necessaires au ' . $req->centre->name . '. Priorite : ' . $req->priority,
+                        'sent_at'            => now(),
+                    ]);
+                }
+            }
+        }
 
         // Redirect based on role
         switch ($user->role) {
