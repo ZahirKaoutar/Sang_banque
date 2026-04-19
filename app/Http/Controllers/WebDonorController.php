@@ -21,7 +21,7 @@ class WebDonorController extends Controller
         $daysUntilEligible = 0;
 
         if ($lastDonation) {
-            $daysPassed = now()->diffInDays($lastDonation->donation_date);
+            $daysPassed = (int) abs($lastDonation->donation_date->diffInDays(now()));
             $daysUntilEligible = max(0, 90 - $daysPassed);
         }
 
@@ -46,9 +46,8 @@ class WebDonorController extends Controller
     {
         $user = auth()->user();
 
-        // Get notifications for donors with matching blood group or O- (universal donor)
-        $notifications = Notification::where('blood_group_needed', $user->blood_group)
-            ->orWhere('blood_group_needed', 'O-')
+        // Get notifications assigned to this specific donor
+        $notifications = Notification::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -62,9 +61,9 @@ class WebDonorController extends Controller
     {
         $user = auth()->user();
 
-        // Authorization: donor blood group must match notification requirement
-        if ($user->blood_group !== $notification->blood_group_needed && $notification->blood_group_needed !== 'O-' && $user->blood_group !== 'O+') {
-            return back()->with('error', 'Vous n\'êtes pas autorisé à répondre à cette demande');
+        // Authorization: Ensure the notification belongs to the authenticated user
+        if ($notification->user_id !== $user->id) {
+            abort(403, 'Accès non autorisé');
         }
 
         $validated = $request->validate([
