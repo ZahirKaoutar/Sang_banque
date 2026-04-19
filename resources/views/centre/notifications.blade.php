@@ -3,27 +3,7 @@
 @section('title', 'Réponses des donneurs - HemoLife')
 
 @section('content')
-<div class="py-12 px-4 sm:px-6 lg:px-8" x-data="{
-    modal: false,
-    form: {
-        notification_id: '',
-        donor_name: '',
-        blood_group_needed: '',
-        donation_date: '{{ now()->format('Y-m-d') }}',
-        test_result: '',
-        observed_blood_group: '',
-        medical_notes: ''
-    },
-    openModal(notifId, donorName, bloodGroup) {
-        this.form.notification_id = notifId;
-        this.form.donor_name = donorName;
-        this.form.blood_group_needed = bloodGroup;
-        this.form.observed_blood_group = bloodGroup;
-        this.form.test_result = '';
-        this.form.medical_notes = '';
-        this.modal = true;
-    }
-}">
+<div class="py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto space-y-8">
 
         <div>
@@ -92,7 +72,7 @@
                                 </td>
                                 <td class="py-4 px-4">
                                     @if($response->donor_response === 'accepter' && !$response->donation_recorded)
-                                        <button @click="openModal(
+                                        <button onclick="openMedicalModal(
                                                     {{ $response->id }},
                                                     '{{ addslashes($response->donor->name ?? 'Anonyme') }}',
                                                     '{{ $response->blood_group_needed }}'
@@ -114,28 +94,28 @@
         @endif
     </div>
 
-    {{-- Modal formulaire test médical --}}
-    <div x-show="modal" x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-         @keydown.escape.window="modal = false">
-        <div class="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl mx-4" @click.stop>
+    {{-- Modal formulaire test médical Native JS --}}
+    <div id="medical-test-modal"
+         class="js-hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl mx-4" onclick="event.stopPropagation()">
 
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h2 class="text-xl font-bold text-dark">Test médical du donneur</h2>
-                    <p class="text-sm text-gray-500 mt-1" x-text="'Donneur : ' + form.donor_name"></p>
+                    <p class="text-sm text-gray-500 mt-1" id="modal-donor-name"></p>
                 </div>
-                <button @click="modal = false" class="text-gray-400 hover:text-dark text-2xl leading-none">&times;</button>
+                <button onclick="closeMedicalModal()" class="text-gray-400 hover:text-dark text-2xl leading-none">&times;</button>
             </div>
 
-            <form method="POST" action="{{ route('centre.donations.store') }}" class="space-y-5">
+            <form method="POST" action="{{ route('centre.donations.store') }}" class="space-y-5" id="medical-test-form">
                 @csrf
-                <input type="hidden" name="notification_id" x-model="form.notification_id" />
+                <input type="hidden" name="notification_id" id="notif_id" />
 
                 <!-- Date du don -->
                 <div>
                     <label class="block text-sm font-bold text-dark mb-2">Date du don</label>
-                    <input type="date" name="donation_date" x-model="form.donation_date"
+                    <input type="date" name="donation_date" id="donation_date"
+                           value="{{ now()->format('Y-m-d') }}"
                            max="{{ now()->format('Y-m-d') }}" required
                            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none" />
                 </div>
@@ -143,7 +123,7 @@
                 <!-- Groupe sanguin observé -->
                 <div>
                     <label class="block text-sm font-bold text-dark mb-2">Groupe sanguin observé</label>
-                    <select name="observed_blood_group" x-model="form.observed_blood_group" required
+                    <select name="observed_blood_group" id="observed_blood_group" required
                             class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none">
                         @foreach(['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as $group)
                             <option value="{{ $group }}">{{ $group }}</option>
@@ -156,17 +136,15 @@
                     <label class="block text-sm font-bold text-dark mb-3">Résultat du test médical</label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="cursor-pointer">
-                            <input type="radio" name="test_result" value="accepted" x-model="form.test_result" required class="sr-only" />
-                            <div class="p-4 rounded-2xl border-2 text-center font-bold transition"
-                                 :class="form.test_result === 'accepted' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500 hover:border-green-300'">
+                            <input type="radio" name="test_result" value="accepted" class="sr-only test-result-radio" required />
+                            <div id="div-accepted" class="p-4 rounded-2xl border-2 text-center font-bold transition border-gray-200 text-gray-500 hover:border-green-300">
                                 ✅ Accepté<br>
                                 <span class="text-xs font-normal">Donneur en bonne santé</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="test_result" value="rejected" x-model="form.test_result" required class="sr-only" />
-                            <div class="p-4 rounded-2xl border-2 text-center font-bold transition"
-                                 :class="form.test_result === 'rejected' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 text-gray-500 hover:border-red-300'">
+                            <input type="radio" name="test_result" value="rejected" class="sr-only test-result-radio" required />
+                            <div id="div-rejected" class="p-4 rounded-2xl border-2 text-center font-bold transition border-gray-200 text-gray-500 hover:border-red-300">
                                 ❌ Refusé<br>
                                 <span class="text-xs font-normal">Problème de santé détecté</span>
                             </div>
@@ -178,41 +156,139 @@
                 <div>
                     <label class="block text-sm font-bold text-dark mb-2">
                         Notes médicales
-                        <span x-show="form.test_result === 'rejected'" class="text-red-500">*</span>
-                        <span x-show="form.test_result !== 'rejected'" class="text-gray-400 font-normal">(optionnel)</span>
+                        <span id="notes-asterisk" class="js-hidden text-red-500">*</span>
+                        <span id="notes-optional" class="text-gray-400 font-normal">(optionnel)</span>
                     </label>
-                    <textarea name="medical_notes" x-model="form.medical_notes" rows="3"
-                              :required="form.test_result === 'rejected'"
+                    <textarea name="medical_notes" id="medical_notes" rows="3"
                               placeholder="Ex: Taux d'hémoglobine insuffisant, tension artérielle élevée..."
                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none resize-none text-sm"></textarea>
                 </div>
 
                 <!-- Info stock -->
-                <div x-show="form.test_result === 'accepted'"
-                     class="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-xl text-sm font-bold">
-                    🩸 Le stock sera incrémenté de 1 unité pour le groupe <span x-text="form.observed_blood_group" class="font-black ml-1"></span>
+                <div id="info-accepted" class="js-hidden flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-xl text-sm font-bold">
+                    🩸 Le stock sera incrémenté de 1 unité pour le groupe <span id="info-blood-group" class="font-black ml-1"></span>
                 </div>
-                <div x-show="form.test_result === 'rejected'"
-                     class="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl text-sm font-bold">
+                <div id="info-rejected" class="js-hidden flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl text-sm font-bold">
                     ⚠️ Le stock ne sera pas modifié. Les notes seront enregistrées dans le dossier du donneur.
                 </div>
 
                 <!-- Actions -->
                 <div class="flex gap-3 pt-2">
-                    <button type="button" @click="modal = false"
+                    <button type="button" onclick="closeMedicalModal()"
                             class="flex-1 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition">
                         Annuler
                     </button>
-                    <button type="submit" :disabled="!form.test_result"
-                            class="flex-1 py-3 rounded-xl font-bold text-white transition"
-                            :class="form.test_result === 'accepted' ? 'bg-green-600 hover:bg-green-700' : (form.test_result === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed')">
-                        <span x-show="form.test_result === 'accepted'">✅ Valider le don</span>
-                        <span x-show="form.test_result === 'rejected'">❌ Enregistrer le refus</span>
-                        <span x-show="!form.test_result">Choisir un résultat</span>
+                    <button type="submit" id="submit-btn" disabled
+                            class="flex-1 py-3 rounded-xl font-bold text-white transition bg-gray-300 cursor-not-allowed">
+                        <span id="btn-text-accepted" class="js-hidden">✅ Valider le don</span>
+                        <span id="btn-text-rejected" class="js-hidden">❌ Enregistrer le refus</span>
+                        <span id="btn-text-default">Choisir un résultat</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('medical-test-modal');
+        const radios = document.querySelectorAll('.test-result-radio');
+        const selectBloodGroup = document.getElementById('observed_blood_group');
+        
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeMedicalModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !modal.classList.contains('js-hidden')) {
+                    closeMedicalModal();
+                }
+            });
+        }
+        
+        if (selectBloodGroup) {
+            selectBloodGroup.addEventListener('change', (e) => {
+                document.getElementById('info-blood-group').textContent = e.target.value;
+            });
+        }
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', updateFormState);
+        });
+    });
+
+    function updateFormState() {
+        const val = document.querySelector('.test-result-radio:checked')?.value;
+        const divAccepted = document.getElementById('div-accepted');
+        const divRejected = document.getElementById('div-rejected');
+        
+        divAccepted.className = 'p-4 rounded-2xl border-2 text-center font-bold transition ' + (val === 'accepted' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500 hover:border-green-300');
+        divRejected.className = 'p-4 rounded-2xl border-2 text-center font-bold transition ' + (val === 'rejected' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 text-gray-500 hover:border-red-300');
+
+        const notesAst = document.getElementById('notes-asterisk');
+        const notesOpt = document.getElementById('notes-optional');
+        const notesArea = document.getElementById('medical_notes');
+        
+        if (val === 'rejected') {
+            notesAst.classList.remove('js-hidden');
+            notesOpt.classList.add('js-hidden');
+            notesArea.required = true;
+        } else {
+            notesAst.classList.add('js-hidden');
+            notesOpt.classList.remove('js-hidden');
+            notesArea.required = false;
+        }
+
+        document.getElementById('info-accepted').classList.toggle('js-hidden', val !== 'accepted');
+        document.getElementById('info-rejected').classList.toggle('js-hidden', val !== 'rejected');
+
+        const btn = document.getElementById('submit-btn');
+        const tAcc = document.getElementById('btn-text-accepted');
+        const tRej = document.getElementById('btn-text-rejected');
+        const tDef = document.getElementById('btn-text-default');
+
+        if (val) {
+            btn.disabled = false;
+            if (val === 'accepted') {
+                btn.className = 'flex-1 py-3 rounded-xl font-bold text-white transition bg-green-600 hover:bg-green-700';
+                tAcc.classList.remove('js-hidden');
+                tRej.classList.add('js-hidden');
+                tDef.classList.add('js-hidden');
+            } else {
+                btn.className = 'flex-1 py-3 rounded-xl font-bold text-white transition bg-red-600 hover:bg-red-700';
+                tAcc.classList.add('js-hidden');
+                tRej.classList.remove('js-hidden');
+                tDef.classList.add('js-hidden');
+            }
+        } else {
+            btn.disabled = true;
+            btn.className = 'flex-1 py-3 rounded-xl font-bold text-white transition bg-gray-300 cursor-not-allowed';
+            tAcc.classList.add('js-hidden');
+            tRej.classList.add('js-hidden');
+            tDef.classList.remove('js-hidden');
+        }
+    }
+
+    function openMedicalModal(notifId, donorName, bloodGroup) {
+        document.getElementById('notif_id').value = notifId;
+        document.getElementById('modal-donor-name').textContent = 'Donneur : ' + donorName;
+        
+        const selectBG = document.getElementById('observed_blood_group');
+        selectBG.value = bloodGroup;
+        document.getElementById('info-blood-group').textContent = bloodGroup;
+        
+        document.querySelectorAll('.test-result-radio').forEach(r => r.checked = false);
+        document.getElementById('medical_notes').value = '';
+        
+        updateFormState();
+        document.getElementById('medical-test-modal').classList.remove('js-hidden');
+    }
+
+    function closeMedicalModal() {
+        document.getElementById('medical-test-modal').classList.add('js-hidden');
+    }
+</script>
 @endsection
