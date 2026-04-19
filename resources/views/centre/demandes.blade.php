@@ -3,80 +3,7 @@
 @section('title', 'Demandes - HemoLife')
 
 @section('content')
-<div class="py-12 px-4 sm:px-6 lg:px-8" x-data="{
-    filter: 'all',
-    modal: false,
-    modalData: { id: null, hopital: '', blood_group: '', quantity_needed: 0, stock: 0, loading: false, error: '' },
-    openModal(id, hopital, blood_group, quantity_needed) {
-        // Vérifie que l'utilisateur est authentifié
-        if (!id || id === 'undefined') {
-            this.modalData.error = 'ID de demande invalide';
-            return;
-        }
-
-        this.modalData = { id, hopital, blood_group, quantity_needed, stock: null, loading: true, error: '' };
-        this.modal = true;
-
-        const url = `/centre/demandes/${id}/details`;
-        const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
-
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrfToken || '',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'include'
-        })
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            this.modalData.stock = data.stock || 0;
-            this.modalData.loading = false;
-        })
-        .catch(err => {
-            this.modalData.error = `Erreur: ${err.message}`;
-            this.modalData.loading = false;
-        });
-    },
-    validateRequest() {
-        const url = `/centre/demandes/${this.modalData.id}/validate`;
-        const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
-
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken || ''
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({})
-        })
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            this.modal = false;
-
-            if (data.error) {
-                alert('❌ ' + data.error);
-                return;
-            }
-
-            alert('✅ ' + (data.message || 'Validation réussie'));
-            window.location.reload();
-        })
-        .catch(err => {
-            console.error('Validation fetch error:', err);
-            alert('❌ Erreur: ' + err.message);
-        });
-    }
-}">
+<div class="py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto space-y-8">
         <div>
             <h1 class="text-4xl font-bold text-dark mb-2">Demandes de sang</h1>
@@ -86,9 +13,8 @@
         <!-- Filter Tabs -->
         <div class="flex gap-3 border-b border-gray-200">
             @foreach(['all' => 'Tous', 'pending' => 'En attente', 'partial' => 'Partiel', 'Fulfilled' => 'Complété'] as $val => $label)
-                <button @click="filter = '{{ $val }}'"
-                        :class="filter === '{{ $val }}' ? 'border-b-2 border-red-mid text-red-mid' : 'text-gray-600 hover:text-dark'"
-                        class="px-4 py-2 font-bold transition">{{ $label }}</button>
+                <button data-filter="{{ $val }}"
+                        class="filter-btn {{ $val === 'all' ? 'border-b-2 border-red-mid text-red-mid' : 'text-gray-600 hover:text-dark' }} px-4 py-2 font-bold transition">{{ $label }}</button>
             @endforeach
         </div>
 
@@ -109,8 +35,8 @@
                     </thead>
                     <tbody>
                         @foreach($allRequests as $req)
-                            <tr x-show="filter === 'all' || filter === '{{ $req->status }}'"
-                                class="border-b border-gray-100 hover:bg-gray-50 transition">
+                            <tr data-status="{{ $req->status }}"
+                                class="demande-row border-b border-gray-100 hover:bg-gray-50 transition">
                                 <td class="py-4 px-4">{{ $req->hopital->name ?? 'N/A' }}</td>
                                 <td class="py-4 px-4">
                                     @include('components.blood-badge', ['bloodGroup' => $req->blood_group])
@@ -127,10 +53,10 @@
                                     @include('components.status-badge', ['status' => $req->status])
                                 </td>
                                 <td class="py-4 px-4">
-                                    @if($req->status === 'pending')
-                                        <button @click="openModal({{ $req->id }}, '{{ addslashes($req->hopital->name ?? 'N/A') }}', '{{ $req->blood_group }}', {{ $req->quantity_needed }})"
-                                                class="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-bold">
-                                            Valider
+                                    @if($req->status === 'pending' || $req->status === 'partial')
+                                        <button onclick="openValidateModal({{ $req->id }}, '{{ addslashes($req->hopital->name ?? 'N/A') }}', '{{ $req->blood_group }}', {{ $req->quantity_needed }})"
+                                                class="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-bold">
+                                            Détails
                                         </button>
                                     @else
                                         <span class="text-gray-400 text-sm">-</span>
@@ -144,75 +70,295 @@
         @endif
     </div>
 
-    {{-- Modal Alpine.js --}}
-    <div x-show="modal" x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-         @keydown.escape.window="modal = false">
-        <div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" @click.stop>
+    {{-- Modal Native JS --}}
+    <div id="validate-modal"
+         class="js-hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-dark">Analyse de la demande</h2>
-                <button @click="modal = false" class="text-gray-400 hover:text-dark text-2xl leading-none">&times;</button>
+                <button onclick="closeValidateModal()" class="text-gray-400 hover:text-dark text-2xl leading-none">&times;</button>
             </div>
 
-            <div x-show="modalData.loading" class="text-center py-8 text-gray-500">
+            <div id="modal-loading" class="text-center py-8 text-gray-500">
                 <div class="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-red-mid rounded-full"></div>
                 <p class="mt-2">Chargement des données...</p>
             </div>
-            <div x-show="modalData.error" class="text-red-600 text-sm p-4 bg-red-50 rounded-xl border border-red-200">
+            <div id="modal-error-container" class="js-hidden text-red-600 text-sm p-4 bg-red-50 rounded-xl border border-red-200">
                 <p class="font-bold">⚠️ Erreur</p>
-                <p x-text="modalData.error" class="mt-1"></p>
+                <p id="modal-error-text" class="mt-1"></p>
             </div>
 
-            <div x-show="!modalData.loading && !modalData.error">
+            <div id="modal-content" class="js-hidden">
                 <div class="space-y-4 mb-6">
                     <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
                         <span class="text-sm font-bold text-gray-600">Hôpital</span>
-                        <span class="font-bold text-dark" x-text="modalData.hopital"></span>
+                        <span class="font-bold text-dark" id="modal-hopital"></span>
                     </div>
                     <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
                         <span class="text-sm font-bold text-gray-600">Groupe sanguin</span>
-                        <span class="font-black text-red-600" x-text="modalData.blood_group"></span>
+                        <span class="font-black text-red-600" id="modal-blood-group"></span>
                     </div>
                     <div class="flex justify-between items-center p-4 bg-blue-50 rounded-2xl">
                         <span class="text-sm font-bold text-gray-600">Quantité demandée</span>
-                        <span class="font-black text-blue-700" x-text="modalData.quantity_needed + ' unités'"></span>
+                        <span class="font-black text-blue-700" id="modal-quantity"></span>
                     </div>
-                    <div class="flex justify-between items-center p-4 rounded-2xl"
-                         :class="modalData.stock >= modalData.quantity_needed ? 'bg-green-50' : 'bg-red-50'">
+                    <div id="modal-stock-container" class="flex justify-between items-center p-4 rounded-2xl">
                         <span class="text-sm font-bold text-gray-600">Stock actuel</span>
-                        <span class="font-black" :class="modalData.stock >= modalData.quantity_needed ? 'text-green-700' : 'text-red-700'"
-                              x-text="(modalData.stock ?? 0) + ' unités'"></span>
+                        <span class="font-black" id="modal-stock"></span>
                     </div>
                 </div>
 
                 {{-- Indicateur visuel --}}
-                <div x-show="modalData.stock !== null">
-                    <div x-show="modalData.stock >= modalData.quantity_needed"
-                         class="flex items-center gap-2 p-3 bg-green-100 text-green-800 rounded-xl text-sm font-bold mb-4">
+                <div id="modal-stock-indicators">
+                    <div id="indicator-sufficient" class="js-hidden flex items-center gap-2 p-3 bg-green-100 text-green-800 rounded-xl text-sm font-bold mb-4">
                         ✅ Stock suffisant — La demande peut être satisfaite entièrement.
                     </div>
-                    <div x-show="modalData.stock < modalData.quantity_needed && modalData.stock > 0"
-                         class="flex items-center gap-2 p-3 bg-yellow-100 text-yellow-800 rounded-xl text-sm font-bold mb-4">
+                    <div id="indicator-partial" class="js-hidden flex items-center gap-2 p-3 bg-yellow-100 text-yellow-800 rounded-xl text-sm font-bold mb-4">
                         ⚠️ Stock partiel — Des alertes seront envoyées aux donneurs pour le reste.
                     </div>
-                    <div x-show="modalData.stock === 0"
-                         class="flex items-center gap-2 p-3 bg-red-100 text-red-800 rounded-xl text-sm font-bold mb-4">
+                    <div id="indicator-critical" class="js-hidden flex items-center gap-2 p-3 bg-red-100 text-red-800 rounded-xl text-sm font-bold mb-4">
                         🚨 Stock critique — Aucune unité disponible. Les donneurs seront alertés.
                     </div>
                 </div>
 
-                <div class="flex gap-3">
-                    <button @click="modal = false"
-                            class="flex-1 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition">
+                <div class="flex gap-2">
+                    <button onclick="closeValidateModal()"
+                            class="py-3 px-4 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition">
                         Annuler
                     </button>
-                    <button @click="validateRequest()"
-                            class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition">
-                        Confirmer la validation
+                    <button onclick="sendNotification()" id="btn-notify"
+                            class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">
+                        Envoyer Notification
+                    </button>
+                    <button onclick="confirmValidateRequest()" id="btn-validate"
+                            class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Valider la demande
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    let currentModalId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const rows = document.querySelectorAll('.demande-row');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.target.getAttribute('data-filter');
+                
+                // Update active state
+                filterBtns.forEach(b => {
+                    b.classList.remove('border-b-2', 'border-red-mid', 'text-red-mid');
+                    b.classList.add('text-gray-600', 'hover:text-dark');
+                });
+                e.target.classList.remove('text-gray-600', 'hover:text-dark');
+                e.target.classList.add('border-b-2', 'border-red-mid', 'text-red-mid');
+
+                // Filter rows
+                rows.forEach(row => {
+                    const status = row.getAttribute('data-status');
+                    if (filter === 'all' || status === filter) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeValidateModal();
+        });
+
+        // Close modal on outside click
+        const modal = document.getElementById('validate-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeValidateModal();
+            });
+        }
+    });
+
+    function openValidateModal(id, hopital, blood_group, quantity_needed) {
+        if (!id || id === 'undefined') {
+            showModalError('ID de demande invalide');
+            return;
+        }
+
+        currentModalId = id;
+        document.getElementById('validate-modal').classList.remove('js-hidden');
+        document.getElementById('modal-loading').classList.remove('js-hidden');
+        document.getElementById('modal-error-container').classList.add('js-hidden');
+        document.getElementById('modal-content').classList.add('js-hidden');
+
+        document.getElementById('modal-hopital').textContent = hopital;
+        document.getElementById('modal-blood-group').textContent = blood_group;
+        document.getElementById('modal-quantity').textContent = quantity_needed + ' unités';
+
+        const url = `/centre/demandes/${id}/details`;
+        const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('modal-loading').classList.add('js-hidden');
+            document.getElementById('modal-content').classList.remove('js-hidden');
+            
+            const stock = data.stock || 0;
+            const stockEl = document.getElementById('modal-stock');
+            const stockContainer = document.getElementById('modal-stock-container');
+            
+            stockEl.textContent = stock + ' / ' + quantity_needed + ' unités collectées';
+            
+            const btnValidate = document.getElementById('btn-validate');
+            let canValidate = false;
+
+            if (stock >= quantity_needed) {
+                stockContainer.className = 'flex justify-between items-center p-4 rounded-2xl bg-green-50';
+                stockEl.className = 'font-black text-green-700';
+                canValidate = true;
+            } else {
+                stockContainer.className = 'flex justify-between items-center p-4 rounded-2xl bg-red-50';
+                stockEl.className = 'font-black text-red-700';
+                // Check urgent condition
+                if (data.priority === 'Urgent' && data.hours_passed >= 10) {
+                    canValidate = true;
+                }
+            }
+
+            btnValidate.disabled = !canValidate;
+            if (!canValidate) {
+                btnValidate.title = "Stock insuffisant. (Les urgences \> 10h peuvent être validées partiellement)";
+            } else {
+                btnValidate.title = "";
+            }
+
+            document.getElementById('indicator-sufficient').classList.add('js-hidden');
+            document.getElementById('indicator-partial').classList.add('js-hidden');
+            document.getElementById('indicator-critical').classList.add('js-hidden');
+
+            if (stock >= quantity_needed) {
+                document.getElementById('indicator-sufficient').classList.remove('js-hidden');
+            } else if (stock > 0) {
+                document.getElementById('indicator-partial').classList.remove('js-hidden');
+            } else {
+                document.getElementById('indicator-critical').classList.remove('js-hidden');
+            }
+        })
+        .catch(err => {
+            showModalError(`Erreur: ${err.message}`);
+        });
+    }
+
+    function showModalError(msg) {
+        document.getElementById('modal-loading').classList.add('js-hidden');
+        document.getElementById('modal-content').classList.add('js-hidden');
+        document.getElementById('modal-error-container').classList.remove('js-hidden');
+        document.getElementById('modal-error-text').textContent = msg;
+    }
+
+    function closeValidateModal() {
+        document.getElementById('validate-modal').classList.add('js-hidden');
+        currentModalId = null;
+    }
+
+    function sendNotification() {
+        if (!currentModalId) return;
+
+        const btn = document.getElementById('btn-notify');
+        btn.disabled = true;
+        btn.textContent = 'Envoi...';
+
+        const url = `/centre/demandes/${currentModalId}/notify`;
+        const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = 'Envoyer Notification';
+            
+            if (data.error) {
+                alert('❌ ' + data.error);
+                return;
+            }
+
+            alert('✅ ' + (data.message || 'Notifications envoyées'));
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.textContent = 'Envoyer Notification';
+            console.error('Notify fetch error:', err);
+            alert('❌ Erreur: ' + err.message);
+        });
+    }
+
+    function confirmValidateRequest() {
+        if (!currentModalId) return;
+
+        const url = `/centre/demandes/${currentModalId}/validate`;
+        const csrfToken = document.querySelector('meta[name=csrf-token]')?.content;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            closeValidateModal();
+
+            if (data.error) {
+                alert('❌ ' + data.error);
+                return;
+            }
+
+            alert('✅ ' + (data.message || 'Validation réussie'));
+            window.location.reload();
+        })
+        .catch(err => {
+            console.error('Validation fetch error:', err);
+            alert('❌ Erreur: ' + err.message);
+        });
+    }
+</script>
 @endsection
