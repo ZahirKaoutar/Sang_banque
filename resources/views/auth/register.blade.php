@@ -16,7 +16,7 @@
             <p class="text-gray-500 mt-2">Créez votre compte HemoLife</p>
         </div>
 
-        <form method="POST" action="{{ route('register') }}" class="space-y-4" x-data="{ bloodGroup: '' }">
+        <form method="POST" action="{{ route('register') }}" class="space-y-4">
             @csrf
 
             <div>
@@ -61,10 +61,8 @@
                 <div class="grid grid-cols-4 gap-2">
                     @foreach(['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as $group)
                         <label class="cursor-pointer">
-                            <input type="radio" name="blood_group" value="{{ $group }}" x-model="bloodGroup"
-                                class="hidden" />
-                            <div class="p-3 text-center rounded-xl border-2 transition-all"
-                                :class="bloodGroup === '{{ $group }}' ? 'border-red-mid bg-red-pale text-red-deep font-bold' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
+                            <input type="radio" name="blood_group" value="{{ $group }}" class="hidden bg-radio" />
+                            <div id="bg-div-{{ $group }}" class="p-3 text-center rounded-xl border-2 transition-all border-gray-200 bg-gray-50 hover:border-gray-300">
                                 {{ $group }}
                             </div>
                         </label>
@@ -109,4 +107,36 @@
         </form>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const radios = document.querySelectorAll('.bg-radio');
+        const oldVal = "{{ old('blood_group') }}";
+        
+        function updateStyle(selectedVal) {
+            radios.forEach(radio => {
+                // Ensure correct string escaping since IDs might have '+'
+                const div = document.getElementById('bg-div-' + radio.value);
+                if (div) {
+                    if(radio.value === selectedVal) {
+                        div.className = 'p-3 text-center rounded-xl border-2 transition-all border-red-mid bg-red-pale text-red-deep font-bold';
+                        radio.checked = true;
+                    } else {
+                        div.className = 'p-3 text-center rounded-xl border-2 transition-all border-gray-200 bg-gray-50 hover:border-gray-300';
+                    }
+                }
+            });
+        }
+        
+        if(oldVal) updateStyle(oldVal);
+        
+        radios.forEach(r => {
+            r.addEventListener('change', (e) => {
+                updateStyle(e.target.value);
+            });
+        });
+    });
+</script>
 @endsection
