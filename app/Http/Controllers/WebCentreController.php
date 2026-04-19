@@ -58,7 +58,7 @@ class WebCentreController extends Controller
                 return response()->json(['error' => 'Aucun centre associé'], 403);
             }
 
-            $bloodRequest = BloodRequest::find($id);
+            $bloodRequest = BloodRequest::with('hopital')->find($id);
 
             if (!$bloodRequest) {
                 return response()->json(['error' => 'Demande non trouvée'], 404);
@@ -75,31 +75,71 @@ class WebCentreController extends Controller
 
                 $quantiteStock    = $stock ? (int) $stock->quantity_units : 0;
                 $quantiteDemandee = (int) $bloodRequest->quantity_needed;
+                $hoursPassed = now()->diffInHours($bloodRequest->created_at);
 
+                $canValidate = false;
                 if ($quantiteStock >= $quantiteDemandee) {
-                    if ($stock) {
-                        $stock->decrement('quantity_units', min($quantiteDemandee, $quantiteStock));
-                    }
-                    $bloodRequest->update(['status' => 'Fulfilled', 'quantity_fulfilled' => $quantiteDemandee]);
-                    return ['status' => 'Fulfilled', 'message' => 'Demande satisfaite. Stock mis à jour.'];
+                    $canValidate = true;
+                } else if ($bloodRequest->priority === 'Urgent' && $hoursPassed >= 10) {
+                    $canValidate = true;
                 }
 
-                if ($quantiteStock > 0) {
-                    $stock->update(['quantity_units' => 0]);
-                    $bloodRequest->update(['status' => 'partial', 'quantity_fulfilled' => $quantiteStock]);
-                    $this->alerterDonneurs($bloodRequest, $centre, $quantiteDemandee - $quantiteStock);
-                    return ['status' => 'partial', 'message' => "{$quantiteStock} unités envoyées. Alertes lancées pour le reste."];
+                if (!$canValidate) {
+                    return ['status' => 'error', 'error' => 'La demande ne peut pas être validée. Soit le stock est insuffisant, soit le délai de 10h pour une demande urgente n\'est pas atteint.'];
                 }
 
-                $this->alerterDonneurs($bloodRequest, $centre, $quantiteDemandee);
-                $bloodRequest->update(['status' => 'pending']);
-                return ['status' => 'pending', 'message' => 'Aucun stock. Alertes envoyées aux donneurs compatibles.'];
+                $sentUnits = min($quantiteDemandee, $quantiteStock);
+                
+                if ($stock && $sentUnits > 0) {
+                    $stock->decrement('quantity_units', $sentUnits);
+                }
+
+                $status = ($sentUnits >= $quantiteDemandee) ? 'Fulfilled' : 'partial';
+                $bloodRequest->update(['status' => $status, 'quantity_fulfilled' => $sentUnits]);
+
+                // Notify hospital
+                Notification::create([
+                    'user_id'            => $bloodRequest->hopital->user_id,
+                    'center_id'          => $centre->id,
+                    'blood_group_needed' => $bloodRequest->blood_group,
+                    'message'            => "Votre demande de {$quantiteDemandee} unités de {$bloodRequest->blood_group} a été validée. {$sentUnits} unités vous ont été envoyées.",
+                    'sent_at'            => now(),
+                ]);
+
+                return ['status' => $status, 'message' => "Demande validée. {$sentUnits} unités envoyées."];
             });
 
             return response()->json($result, 200);
 
         } catch (\Exception $e) {
             Log::error('validateRequest error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function notifyDonors($id)
+    {
+        try {
+            $centre = auth()->user()->centre;
+            $bloodRequest = BloodRequest::with('hopital')->findOrFail($id);
+
+            if ($bloodRequest->center_id != $centre->id) {
+                return response()->json(['error' => 'Accès refusé'], 403);
+            }
+
+            $stock = BloodStock::where('center_id', $centre->id)
+                ->where('blood_group', $bloodRequest->blood_group)
+                ->sum('quantity_units');
+
+            $quantiteDemandee = (int) $bloodRequest->quantity_needed;
+            $missing = $quantiteDemandee - $stock;
+            if ($missing <= 0) $missing = $quantiteDemandee;
+
+            $this->alerterDonneurs($bloodRequest, $centre, $missing);
+
+            return response()->json(['message' => 'Notifications envoyées aux donneurs et/ou hôpital avec succès.']);
+        } catch (\Exception $e) {
+            Log::error('notifyDonors error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -144,16 +184,48 @@ class WebCentreController extends Controller
             ->where('city', $centre->city)
             ->where('status_availabality', 1)
             ->where('is_banned', 0)
+            ->whereDoesntHave('donations', function ($query) {
+                $query->where('donation_date', '>=', now()->subDays(90));
+            })
             ->get();
 
+        if ($donors->isEmpty()) {
+            // Check if we already alerted the hospital today to avoid spam
+            $recentHospitalAlert = Notification::where('user_id', $bloodRequest->hopital->user_id)
+                ->where('center_id', $centre->id)
+                ->where('blood_group_needed', $bloodRequest->blood_group)
+                ->where('created_at', '>=', now()->subHours(24))
+                ->first();
+
+            if (!$recentHospitalAlert) {
+                Notification::create([
+                    'user_id'            => $bloodRequest->hopital->user_id,
+                    'center_id'          => $centre->id,
+                    'blood_group_needed' => $bloodRequest->blood_group,
+                    'message'            => "Alerte : Aucun donneur disponible dans la ville ({$centre->city}) pour le groupe sanguin {$bloodRequest->blood_group} pour satisfaire votre demande de {$quantite} unités.",
+                    'sent_at'            => now(),
+                ]);
+            }
+            return;
+        }
+
         foreach ($donors as $donor) {
-            Notification::create([
-                'user_id'            => $donor->id,
-                'center_id'          => $centre->id,
-                'blood_group_needed' => $bloodRequest->blood_group,
-                'message'            => 'Urgence : ' . $bloodRequest->quantity_needed . ' unites de sang ' . $bloodRequest->blood_group . ' necessaires au ' . $centre->name . '. Priorite : ' . $bloodRequest->priority,
-                'sent_at'            => now(),
-            ]);
+            // Check if this donor already received a notification for this blood group from this center today
+            $recentDonorAlert = Notification::where('user_id', $donor->id)
+                ->where('center_id', $centre->id)
+                ->where('blood_group_needed', $bloodRequest->blood_group)
+                ->where('created_at', '>=', now()->subHours(24))
+                ->first();
+
+            if (!$recentDonorAlert) {
+                Notification::create([
+                    'user_id'            => $donor->id,
+                    'center_id'          => $centre->id,
+                    'blood_group_needed' => $bloodRequest->blood_group,
+                    'message'            => 'Urgence : ' . $bloodRequest->quantity_needed . ' unites de sang ' . $bloodRequest->blood_group . ' necessaires au ' . $centre->name . '. Priorite : ' . $bloodRequest->priority,
+                    'sent_at'            => now(),
+                ]);
+            }
         }
     }
 
@@ -186,7 +258,10 @@ class WebCentreController extends Controller
             return response()->json([
                 'stock' => (int) $stock,
                 'blood_group' => $bloodRequest->blood_group,
-                'quantity_needed' => $bloodRequest->quantity_needed
+                'quantity_needed' => $bloodRequest->quantity_needed,
+                'priority' => $bloodRequest->priority,
+                'hours_passed' => now()->diffInHours($bloodRequest->created_at),
+                'status' => $bloodRequest->status
             ], 200);
         } catch (\Exception $e) {
             Log::error('getRequestDetails error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
