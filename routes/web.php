@@ -31,6 +31,8 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/home', [WebPageController::class, 'home'])->name('home');
     Route::get('/profile/{id}', [WebPageController::class, 'profile'])->name('profile');
+    Route::get('/profile-edit', [WebPageController::class, 'editProfile'])->name('profile.edit');
+    Route::post('/profile-update', [WebPageController::class, 'updateProfile'])->name('profile.update');
     Route::get('/centres', [WebPageController::class, 'donorCentres'])->name('centres');
 });
 
@@ -54,6 +56,7 @@ Route::middleware(['auth', 'role:AgentCentre'])->group(function () {
     Route::post('/centre/stock', [WebCentreController::class, 'storeStock'])->name('centre.stock.store');
     Route::delete('/centre/stock/{stock}', [WebCentreController::class, 'deleteStock'])->name('centre.stock.delete');
     Route::get('/centre/demandes/{id}/details', [WebCentreController::class, 'getRequestDetails'])->name('centre.demandes.details');
+    Route::post('/centre/demandes/{id}/notify', [WebCentreController::class, 'notifyDonors'])->name('centre.demandes.notify');
     Route::post('/centre/donations', [WebCentreController::class, 'storeDonation'])->name('centre.donations.store');
 });
 
@@ -63,6 +66,7 @@ Route::middleware(['auth', 'role:AgentCentre'])->group(function () {
 Route::middleware(['auth', 'role:AgentHopital'])->group(function () {
     Route::get('/hopital/demandes', [WebHopitalController::class, 'demandes'])->name('hopital.demandes');
     Route::post('/hopital/demandes', [WebHopitalController::class, 'store'])->name('hopital.store');
+    Route::get('/hopital/notifications', [WebHopitalController::class, 'notifications'])->name('hopital.notifications');
 });
 
 /**
@@ -90,8 +94,8 @@ Route::middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('/admin/hopitaux/{hopital}/edit', [WebAdminController::class, 'editHopital'])->name('admin.edit-hopital');
     Route::put('/admin/hopitaux/{hopital}', [WebAdminController::class, 'updateHopital'])->name('admin.update-hopital');
     Route::delete('/admin/hopitaux/{hopital}', [WebAdminController::class, 'deleteHopital'])->name('admin.delete-hopital');
-    Route::post('/admin/users/{id}/ban', [WebAdminController::class, 'banUser'])->name('admin.ban-user');
-    Route::post('/admin/users/{id}/unban', [WebAdminController::class, 'unbanUser'])->name('admin.unban-user');
+    Route::post('/admin/users/{user}/ban', [WebAdminController::class, 'banUser'])->name('admin.ban-user');
+    Route::post('/admin/users/{user}/unban', [WebAdminController::class, 'unbanUser'])->name('admin.unban-user');
 });
 
 /**
