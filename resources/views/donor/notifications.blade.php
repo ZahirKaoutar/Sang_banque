@@ -15,8 +15,7 @@
         @else
             <div class="space-y-4">
                 @foreach($notifications as $notification)
-                    <div x-data="{ responded: {{ $notification->donor_response ? 'true' : 'false' }}, response: '{{ $notification->donor_response ?? '' }}' }"
-                         class="bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-md transition duration-300">
+                    <div class="bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-md transition duration-300">
 
                         <div class="flex justify-between items-start mb-4">
                             <div>
@@ -31,15 +30,13 @@
                         </div>
 
                         {{-- Boutons : masqués si déjà répondu --}}
-                        <div x-show="!responded" class="flex gap-3 mt-4">
+                        @if(!$notification->donor_response)
+                        <div id="buttons-{{ $notification->id }}" class="flex gap-3 mt-4">
                             <form method="POST" action="{{ route('donor.respond', $notification) }}">
                                 @csrf
                                 <input type="hidden" name="response" value="accepter" />
                                 <button type="submit"
-                                        @click.prevent="
-                                            responded = true; response = 'accepter';
-                                            $el.closest('form').submit();
-                                        "
+                                        onclick="handleResponse(event, {{ $notification->id }}, 'accepter', this.form)"
                                         class="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-bold shadow-sm">
                                     ✅ Accepter
                                 </button>
@@ -49,22 +46,19 @@
                                 @csrf
                                 <input type="hidden" name="response" value="refuser" />
                                 <button type="submit"
-                                        @click.prevent="
-                                            responded = true; response = 'refuser';
-                                            $el.closest('form').submit();
-                                        "
+                                        onclick="handleResponse(event, {{ $notification->id }}, 'refuser', this.form)"
                                         class="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-sm">
                                     ❌ Refuser
                                 </button>
                             </form>
                         </div>
+                        @endif
 
-                        {{-- Message de confirmation (Alpine + persistance Blade) --}}
-                        <div x-show="responded" x-cloak
-                             class="text-sm font-bold mt-4 p-3 rounded-lg border"
-                             :class="response === 'accepter' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'">
-                            <span x-show="response === 'accepter'">✅ Merci ! Votre acceptation a été enregistrée. Présentez-vous au centre.</span>
-                            <span x-show="response === 'refuser'">❌ Vous avez refusé cette demande.</span>
+                        {{-- Message de confirmation --}}
+                        <div id="confirm-{{ $notification->id }}"
+                             class="{{ $notification->donor_response ? '' : 'js-hidden' }} text-sm font-bold mt-4 p-3 rounded-lg border {{ $notification->donor_response === 'accepter' ? 'bg-green-50 text-green-700 border-green-200' : ($notification->donor_response === 'refuser' ? 'bg-red-50 text-red-700 border-red-200' : '') }}">
+                            <span id="confirm-text-accepter-{{ $notification->id }}" class="{{ $notification->donor_response === 'accepter' ? '' : 'js-hidden' }}">✅ Merci ! Votre acceptation a été enregistrée. Présentez-vous au centre.</span>
+                            <span id="confirm-text-refuser-{{ $notification->id }}" class="{{ $notification->donor_response === 'refuser' ? '' : 'js-hidden' }}">❌ Vous avez refusé cette demande.</span>
                         </div>
                     </div>
                 @endforeach
@@ -72,4 +66,32 @@
         @endif
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    function handleResponse(event, id, responseType, form) {
+        event.preventDefault();
+        
+        const btnContainer = document.getElementById('buttons-' + id);
+        if(btnContainer) btnContainer.classList.add('js-hidden');
+        
+        const confirmDiv = document.getElementById('confirm-' + id);
+        const textAcc = document.getElementById('confirm-text-accepter-' + id);
+        const textRef = document.getElementById('confirm-text-refuser-' + id);
+        
+        confirmDiv.classList.remove('js-hidden');
+        if (responseType === 'accepter') {
+            confirmDiv.className = 'text-sm font-bold mt-4 p-3 rounded-lg border bg-green-50 text-green-700 border-green-200';
+            textAcc.classList.remove('js-hidden');
+            textRef.classList.add('js-hidden');
+        } else {
+            confirmDiv.className = 'text-sm font-bold mt-4 p-3 rounded-lg border bg-red-50 text-red-700 border-red-200';
+            textAcc.classList.add('js-hidden');
+            textRef.classList.remove('js-hidden');
+        }
+        
+        form.submit();
+    }
+</script>
 @endsection
