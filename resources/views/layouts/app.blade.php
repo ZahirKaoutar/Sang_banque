@@ -9,9 +9,6 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Alpine.js CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
     <!-- Custom Tailwind Colors Configuration -->
     <script>
         tailwind.config = {
@@ -42,6 +39,8 @@
         }
 
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
+
+        .js-hidden { display: none !important; }
     </style>
 
     @yield('styles')
@@ -76,6 +75,7 @@
 
                         @elseif(auth()->user()->role === 'AgentHopital')
                             <a href="{{ route('hopital.demandes') }}" class="text-gray-600 hover:text-red-mid transition">Demandes de sang</a>
+                            <a href="{{ route('hopital.notifications') }}" class="text-gray-600 hover:text-red-mid transition">Notifications</a>
 
                         @elseif(auth()->user()->role === 'Donor')
                             <a href="{{ route('mes-dons') }}" class="text-gray-600 hover:text-red-mid transition">Mes dons</a>
@@ -86,9 +86,9 @@
                         <a href="{{ route('profile', auth()->id()) }}" class="text-gray-600 hover:text-red-mid transition">Profil</a>
                     </div>
 
-                    <!-- Mobile Menu (Alpine.js) -->
+                    <!-- Mobile Menu Button -->
                     <div class="md:hidden flex items-center gap-4">
-                        <button x-data="{ open: false }" @click="open = !open" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <button id="mobile-menu-btn" class="p-2 hover:bg-gray-100 rounded-lg">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
@@ -97,13 +97,13 @@
 
                     <!-- Logout Dropdown -->
                     <div class="flex items-center gap-4">
-                        <div x-data="{ open: false }" class="relative">
-                            <button @click="open = !open" class="flex items-center gap-2 text-gray-600 hover:text-red-mid">
+                        <div class="relative" id="user-dropdown-container">
+                            <button id="user-dropdown-btn" class="flex items-center gap-2 text-gray-600 hover:text-red-mid">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </button>
-                            <div x-show="open" @click.outside="open = false" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100">
+                            <div id="user-dropdown-menu" class="js-hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100">
                                 <p class="px-4 py-3 text-sm text-gray-600 border-b border-gray-100">{{ auth()->user()->name }}</p>
                                 <form method="POST" action="{{ route('logout') }}" class="block">
                                     @csrf
@@ -168,5 +168,33 @@
     </footer>
 
     @yield('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // User Dropdown Logic
+            const dropdownBtn = document.getElementById('user-dropdown-btn');
+            const dropdownMenu = document.getElementById('user-dropdown-menu');
+            
+            if (dropdownBtn && dropdownMenu) {
+                dropdownBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdownMenu.classList.toggle('js-hidden');
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!dropdownMenu.contains(e.target) && !dropdownBtn.contains(e.target)) {
+                        dropdownMenu.classList.add('js-hidden');
+                    }
+                });
+            }
+
+            // Mobile Menu Logic (Placeholder for future functionality if added)
+            const mobileBtn = document.getElementById('mobile-menu-btn');
+            if (mobileBtn) {
+                mobileBtn.addEventListener('click', function() {
+                    // Toggle mobile menu visibility
+                });
+            }
+        });
+    </script>
 </body>
 </html>
