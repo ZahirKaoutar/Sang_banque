@@ -53,7 +53,7 @@
                 </div>
 
                 @if(auth()->id() === $user->id)
-                    <a href="#" class="px-4 py-2 bg-gray-100 text-dark rounded-xl hover:bg-gray-200 transition text-sm font-bold shrink-0">
+                    <a href="{{ route('profile.edit') }}" class="px-4 py-2 bg-gray-100 text-dark rounded-xl hover:bg-gray-200 transition text-sm font-bold shrink-0">
                         Modifier
                     </a>
                 @endif
